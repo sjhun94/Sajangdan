@@ -87,6 +87,22 @@ create table if not exists comment_likes (
   unique (comment_id, user_id)
 );
 
+create table if not exists business_verifications (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references users(id),
+  blob_url text not null,
+  original_filename text,
+  status text not null default 'pending'
+    check (status in ('pending', 'approved', 'rejected')),
+  reviewer_admin_id uuid references users(id),
+  reject_reason text,
+  submitted_at timestamptz not null default now(),
+  reviewed_at timestamptz
+);
+
+create index if not exists idx_business_verifications_status on business_verifications (status);
+create index if not exists idx_business_verifications_user on business_verifications (user_id);
+
 insert into boards (slug, name, description, sort_order) values
   ('free', '자유게시판', '자유롭게 이야기 나누는 공간', 0),
   ('industry', '업종별 게시판', '같은 업종 사장님들끼리 나누는 이야기', 1),

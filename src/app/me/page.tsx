@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { SignOutButton } from "@/components/auth/sign-out-button";
+import { getCurrentVerificationStatus } from "@/lib/verifications";
 
 const ownerStatusLabel: Record<string, string> = {
   current: "현재 사장님",
@@ -21,8 +22,10 @@ export default async function MePage() {
     redirect("/login");
   }
 
-  const { email, ownerStatus, businessVerificationStatus, role } =
-    session.user;
+  const { email, ownerStatus, role } = session.user;
+  const businessVerificationStatus = await getCurrentVerificationStatus(
+    session.user.id
+  );
 
   return (
     <div className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center gap-4 px-6">
@@ -50,6 +53,22 @@ export default async function MePage() {
           </div>
         )}
       </dl>
+      {businessVerificationStatus !== "approved" && (
+        <Link
+          href="/verify-business"
+          className="rounded-full bg-accent px-6 py-3 text-center text-sm font-semibold text-accent-foreground transition-opacity hover:opacity-90"
+        >
+          사업자 인증하러 가기
+        </Link>
+      )}
+      {role === "admin" && (
+        <Link
+          href="/admin/verifications"
+          className="rounded-full border border-foreground/15 px-6 py-3 text-center text-sm font-semibold transition-colors hover:bg-foreground/5"
+        >
+          관리자: 사업자 인증 심사
+        </Link>
+      )}
       <SignOutButton />
       <Link href="/" className="text-center text-sm text-foreground/50">
         홈으로 돌아가기
