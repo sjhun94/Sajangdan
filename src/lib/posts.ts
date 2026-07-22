@@ -48,6 +48,66 @@ export async function listPosts({
   return rows;
 }
 
+export async function countPosts({
+  boardId,
+  query,
+}: {
+  boardId: string;
+  query?: string;
+}): Promise<number> {
+  const params: unknown[] = [boardId];
+  let where = "board_id = $1 and deleted_at is null";
+
+  if (query) {
+    params.push(`%${query}%`);
+    where += ` and (title ilike $${params.length} or content ilike $${params.length})`;
+  }
+
+  const { rows } = await pool.query<{ count: string }>(
+    `select count(*) from posts where ${where}`,
+    params
+  );
+  return Number(rows[0].count);
+}
+
+export type PostSearchResult = PostSummary & {
+  board_slug: string;
+  board_name: string;
+};
+
+export async function searchAllPosts({
+  query,
+  page = 1,
+  pageSize = 20,
+}: {
+  query: string;
+  page?: number;
+  pageSize?: number;
+}): Promise<{ results: PostSearchResult[]; total: number }> {
+  const offset = (page - 1) * pageSize;
+  const like = `%${query}%`;
+
+  const { rows: countRows } = await pool.query<{ count: string }>(
+    `select count(*) from posts
+     where deleted_at is null and (title ilike $1 or content ilike $1)`,
+    [like]
+  );
+
+  const { rows } = await pool.query<PostSearchResult>(
+    `select
+       p.id, p.title, p.content, p.like_count, p.comment_count, p.created_at,
+       b.slug as board_slug, b.name as board_name
+     from posts p
+     join boards b on b.id = p.board_id
+     where p.deleted_at is null and (p.title ilike $1 or p.content ilike $1)
+     order by p.created_at desc
+     limit $2 offset $3`,
+    [like, pageSize, offset]
+  );
+
+  return { results: rows, total: Number(countRows[0].count) };
+}
+
 export async function getPostById(
   id: string,
   currentUserId?: string
