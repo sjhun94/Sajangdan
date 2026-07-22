@@ -1,5 +1,6 @@
 import { randomUUID } from "crypto";
 import NextAuth from "next-auth";
+import type { Provider } from "next-auth/providers";
 import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 import Kakao from "next-auth/providers/kakao";
@@ -17,7 +18,7 @@ type UserRow = {
   business_verification_status: string;
 };
 
-const providers: NonNullable<Parameters<typeof NextAuth>[0]["providers"]> = [
+const providers: Provider[] = [
   Credentials({
     credentials: {
       email: { label: "이메일", type: "email" },
