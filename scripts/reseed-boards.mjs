@@ -6,6 +6,7 @@ const boards = [
   ["local", "우리동네 게시판", "지역 기반으로 나누는 동네 정보와 이야기", 2],
   ["franchise", "프랜차이즈 게시판", "프랜차이즈 창업, 운영, 본사 관련 이야기", 3],
   ["topic", "주제별 게시판", "회계, 세무, 마케팅 등 주제별 정보 공유", 4],
+  ["info", "자영업자 알짜정보", "정부지원 등 자영업자에게 유용한 알짜 정보 공유", 5],
 ];
 
 const client = new Client({ connectionString: process.env.DATABASE_URL_UNPOOLED });
