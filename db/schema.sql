@@ -36,11 +36,56 @@ create table if not exists posts (
   content text not null,
   like_count int not null default 0,
   comment_count int not null default 0,
+  next_anon_number int not null default 1, -- 이 글 안에서 다음에 부여할 "익명N" 번호
   created_at timestamptz not null default now(),
   deleted_at timestamptz
 );
 
+-- 기존에 posts 테이블이 이미 있던 경우를 위한 안전장치 (없으면 컬럼 추가)
+alter table posts add column if not exists next_anon_number int not null default 1;
+
 create index if not exists idx_posts_board_created on posts (board_id, created_at desc);
+
+-- 글쓴이를 제외한, 댓글로 처음 참여한 사람에게 글 단위로 "익명N" 번호를 부여
+create table if not exists post_participants (
+  id uuid primary key default gen_random_uuid(),
+  post_id uuid not null references posts(id),
+  user_id uuid not null references users(id),
+  anon_number int not null,
+  created_at timestamptz not null default now(),
+  unique (post_id, user_id)
+);
+
+create index if not exists idx_post_participants_post on post_participants (post_id);
+
+create table if not exists comments (
+  id uuid primary key default gen_random_uuid(),
+  post_id uuid not null references posts(id),
+  user_id uuid not null references users(id), -- 내부용. 응답에는 절대 노출하지 않음
+  parent_comment_id uuid references comments(id), -- null이면 원댓글, 있으면 답글 (1단계까지만 허용)
+  content text not null,
+  like_count int not null default 0,
+  created_at timestamptz not null default now(),
+  deleted_at timestamptz
+);
+
+create index if not exists idx_comments_post_created on comments (post_id, created_at);
+
+create table if not exists post_likes (
+  id uuid primary key default gen_random_uuid(),
+  post_id uuid not null references posts(id),
+  user_id uuid not null references users(id),
+  created_at timestamptz not null default now(),
+  unique (post_id, user_id)
+);
+
+create table if not exists comment_likes (
+  id uuid primary key default gen_random_uuid(),
+  comment_id uuid not null references comments(id),
+  user_id uuid not null references users(id),
+  created_at timestamptz not null default now(),
+  unique (comment_id, user_id)
+);
 
 insert into boards (slug, name, description, sort_order) values
   ('free', '자유게시판', '자유롭게 이야기 나누는 공간', 0),

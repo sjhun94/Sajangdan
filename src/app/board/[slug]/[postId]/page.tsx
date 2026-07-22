@@ -1,6 +1,10 @@
 import { notFound } from "next/navigation";
+import { auth } from "@/auth";
 import { getBoardBySlug } from "@/lib/boards";
 import { getPostById } from "@/lib/posts";
+import { listComments } from "@/lib/comments";
+import { LikeButton } from "@/components/board/like-button";
+import { CommentSection } from "@/components/board/comment-section";
 
 export default async function PostDetailPage({
   params,
@@ -9,21 +13,45 @@ export default async function PostDetailPage({
 }) {
   const { slug, postId } = await params;
 
+  const session = await auth();
+  const currentUserId = session?.user?.id;
+
   const board = await getBoardBySlug(slug);
   if (!board) notFound();
 
-  const post = await getPostById(postId);
+  const post = await getPostById(postId, currentUserId);
   if (!post || post.board_id !== board.id) notFound();
 
+  const comments = await listComments(postId, post.user_id, currentUserId);
+
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-4 px-6 py-16">
-      <div className="flex flex-col gap-2 border-b border-foreground/10 pb-6">
+    <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-8 px-6 py-16">
+      <div className="flex flex-col gap-3 border-b border-foreground/10 pb-6">
+        <span className="text-xs font-semibold text-foreground/70">
+          글쓴이
+        </span>
         <h1 className="text-xl font-bold">{post.title}</h1>
-        <div className="text-xs text-foreground/50">
-          익명 · 좋아요 {post.like_count} · 댓글 {post.comment_count}
+        <p className="whitespace-pre-wrap text-sm leading-7">
+          {post.content}
+        </p>
+        <div className="flex items-center gap-2 pt-2">
+          <LikeButton
+            targetType="post"
+            targetId={post.id}
+            initialLiked={post.liked_by_me}
+            initialCount={post.like_count}
+          />
+          <span className="text-xs text-foreground/50">
+            댓글 {post.comment_count}
+          </span>
         </div>
       </div>
-      <p className="whitespace-pre-wrap text-sm leading-7">{post.content}</p>
+
+      <CommentSection
+        postId={post.id}
+        comments={comments}
+        isLoggedIn={!!currentUserId}
+      />
     </div>
   );
 }
