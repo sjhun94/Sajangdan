@@ -1,14 +1,13 @@
 import Link from "next/link";
+import { LoginForm } from "@/components/auth/login-form";
 
 export default function LoginPage() {
   return (
-    <div className="mx-auto flex w-full max-w-sm flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
+    <div className="mx-auto flex w-full max-w-sm flex-1 flex-col items-center justify-center gap-4 px-6">
       <h1 className="text-2xl font-bold">로그인</h1>
-      <p className="text-sm text-foreground/70">
-        로그인 기능은 아직 준비 중이에요. 곧 만나요!
-      </p>
-      <Link href="/" className="text-sm font-medium text-accent">
-        홈으로 돌아가기
+      <LoginForm />
+      <Link href="/signup" className="text-sm font-medium text-accent">
+        계정이 없으신가요? 회원가입
       </Link>
     </div>
   );

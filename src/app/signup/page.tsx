@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Building2, Sparkles } from "lucide-react";
+import { SignupForm } from "@/components/auth/signup-form";
 
 export default async function SignupPage({
   searchParams,
@@ -9,20 +10,21 @@ export default async function SignupPage({
   const { type } = await searchParams;
 
   if (type === "owner" || type === "prospective") {
+    const ownerStatus = type === "owner" ? "current" : "prospective";
     return (
-      <div className="mx-auto flex w-full max-w-sm flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
+      <div className="mx-auto flex w-full max-w-sm flex-1 flex-col items-center justify-center gap-4 px-6">
         <h1 className="text-2xl font-bold">
           {type === "owner" ? "현재 사장님" : "예비 사장님"}으로 가입
         </h1>
-        <p className="text-sm text-foreground/70">
-          회원가입 양식은 아직 준비 중이에요. 곧 만나요!
-        </p>
-        <Link href="/signup" className="text-sm font-medium text-accent">
-          다시 선택하기
-        </Link>
-        <Link href="/" className="text-sm font-medium text-foreground/50">
-          홈으로 돌아가기
-        </Link>
+        <SignupForm ownerStatus={ownerStatus} />
+        <div className="flex gap-4 text-sm">
+          <Link href="/signup" className="font-medium text-accent">
+            다시 선택하기
+          </Link>
+          <Link href="/login" className="font-medium text-foreground/50">
+            이미 계정이 있어요
+          </Link>
+        </div>
       </div>
     );
   }
