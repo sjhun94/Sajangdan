@@ -18,3 +18,33 @@ create table if not exists users (
 );
 
 create index if not exists idx_users_email on users (email);
+
+create table if not exists boards (
+  id uuid primary key default gen_random_uuid(),
+  slug text unique not null,
+  name text not null,
+  description text not null default '',
+  sort_order int not null default 0,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists posts (
+  id uuid primary key default gen_random_uuid(),
+  board_id uuid not null references boards(id),
+  user_id uuid not null references users(id), -- 내부용. 응답에는 절대 노출하지 않음
+  title text not null,
+  content text not null,
+  like_count int not null default 0,
+  comment_count int not null default 0,
+  created_at timestamptz not null default now(),
+  deleted_at timestamptz
+);
+
+create index if not exists idx_posts_board_created on posts (board_id, created_at desc);
+
+insert into boards (slug, name, description, sort_order) values
+  ('free', '자유게시판', '자유롭게 이야기 나누는 공간', 0),
+  ('store-ops', '매장운영', '매장 운영, 인력, 재고 등 실전 노하우', 1),
+  ('startup', '폐업/창업', '창업 준비부터 폐업까지 솔직한 이야기', 2),
+  ('tax', '세금/회계', '세금, 회계, 각종 신고 관련 정보 공유', 3)
+on conflict (slug) do nothing;
