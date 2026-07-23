@@ -4,7 +4,8 @@ export type Industry = {
 };
 
 export const INDUSTRIES: Industry[] = [
-  { slug: "food", name: "음식, 외식, 배달" },
+  { slug: "food", name: "음식, 외식" },
+  { slug: "delivery-only", name: "배달전문" },
   { slug: "cafe", name: "카페, 제과, 디저트" },
   { slug: "pub", name: "호프, 주점, 포차" },
   { slug: "unmanned", name: "무인가게" },
