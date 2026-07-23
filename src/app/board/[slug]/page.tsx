@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { getBoardBySlug } from "@/lib/boards";
 import { countPosts, listPosts } from "@/lib/posts";
 import { getIndustryName } from "@/lib/industries";
+import { formatShortDate } from "@/lib/format";
 import { Pagination, getTotalPages } from "@/components/board/pagination";
 import { IndustryTabs } from "@/components/board/industry-tabs";
 
@@ -102,7 +103,8 @@ export default async function BoardPage({
             )}
             <span className="font-medium">{post.title}</span>
             <span className="text-xs text-foreground/50">
-              {post.author_label} · 좋아요 {post.like_count} · 댓글{" "}
+              {post.author_label} · {formatShortDate(post.created_at)} · 조회{" "}
+              {post.view_count} · 좋아요 {post.like_count} · 댓글{" "}
               {post.comment_count}
             </span>
           </Link>

@@ -7,6 +7,7 @@ export type PostSummary = {
   content: string;
   like_count: number;
   comment_count: number;
+  view_count: number;
   industry_slug: string | null;
   author_label: string;
   created_at: string;
@@ -24,6 +25,7 @@ type RawPostRow = {
   content: string;
   like_count: number;
   comment_count: number;
+  view_count: number;
   industry_slug: string | null;
   created_at: string;
   author_region: string | null;
@@ -45,7 +47,7 @@ function toSummary(row: RawPostRow): PostSummary {
 }
 
 const SELECT_POST_WITH_AUTHOR = `
-  p.id, p.title, p.content, p.like_count, p.comment_count, p.industry_slug, p.created_at,
+  p.id, p.title, p.content, p.like_count, p.comment_count, p.view_count, p.industry_slug, p.created_at,
   u.region as author_region, u.industry_slug as author_industry_slug,
   u.owner_status as author_owner_status
 `;
@@ -192,6 +194,12 @@ export async function getPostById(
     user_id: row.user_id,
     liked_by_me: row.liked_by_me,
   };
+}
+
+export async function incrementViewCount(postId: string): Promise<void> {
+  await pool.query(`update posts set view_count = view_count + 1 where id = $1`, [
+    postId,
+  ]);
 }
 
 export async function togglePostLike(

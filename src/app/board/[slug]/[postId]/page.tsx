@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { auth } from "@/auth";
 import { getBoardBySlug } from "@/lib/boards";
-import { getPostById } from "@/lib/posts";
+import { getPostById, incrementViewCount } from "@/lib/posts";
 import { getIndustryName } from "@/lib/industries";
 import { listComments } from "@/lib/comments";
 import { LikeButton } from "@/components/board/like-button";
@@ -20,6 +20,7 @@ export default async function PostDetailPage({
   const board = await getBoardBySlug(slug);
   if (!board) notFound();
 
+  await incrementViewCount(postId);
   const post = await getPostById(postId, currentUserId);
   if (!post || post.board_id !== board.id) notFound();
 
@@ -50,7 +51,7 @@ export default async function PostDetailPage({
             initialCount={post.like_count}
           />
           <span className="text-xs text-foreground/50">
-            댓글 {post.comment_count}
+            조회 {post.view_count} · 댓글 {post.comment_count}
           </span>
         </div>
       </div>
