@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Noto_Sans_KR } from "next/font/google";
 import { AppSessionProvider } from "@/components/providers/session-provider";
+import { SiteHeader } from "@/components/site-header";
 import "./globals.css";
 
 const notoSansKr = Noto_Sans_KR({
@@ -23,7 +24,10 @@ export default function RootLayout({
   return (
     <html lang="ko" className={`${notoSansKr.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col font-sans">
-        <AppSessionProvider>{children}</AppSessionProvider>
+        <AppSessionProvider>
+          <SiteHeader />
+          {children}
+        </AppSessionProvider>
       </body>
     </html>
   );

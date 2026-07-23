@@ -39,13 +39,15 @@ export default async function MePage() {
           <dt className="text-foreground/50">구분</dt>
           <dd>{ownerStatusLabel[ownerStatus] ?? ownerStatus}</dd>
         </div>
-        <div className="flex justify-between">
-          <dt className="text-foreground/50">사업자 인증</dt>
-          <dd>
-            {verificationLabel[businessVerificationStatus] ??
-              businessVerificationStatus}
-          </dd>
-        </div>
+        {ownerStatus === "current" && (
+          <div className="flex justify-between">
+            <dt className="text-foreground/50">사업자 인증</dt>
+            <dd>
+              {verificationLabel[businessVerificationStatus] ??
+                businessVerificationStatus}
+            </dd>
+          </div>
+        )}
         {role === "admin" && (
           <div className="flex justify-between">
             <dt className="text-foreground/50">권한</dt>
@@ -53,7 +55,7 @@ export default async function MePage() {
           </div>
         )}
       </dl>
-      {businessVerificationStatus !== "approved" && (
+      {ownerStatus === "current" && businessVerificationStatus !== "approved" && (
         <Link
           href="/verify-business"
           className="rounded-full bg-accent px-6 py-3 text-center text-sm font-semibold text-accent-foreground transition-opacity hover:opacity-90"

@@ -17,6 +17,18 @@ export default async function VerifyBusinessPage() {
   const session = await auth();
   if (!session?.user) redirect("/login");
 
+  if (session.user.ownerStatus === "prospective") {
+    return (
+      <div className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center gap-4 px-6">
+        <h1 className="text-2xl font-bold">사업자 인증</h1>
+        <p className="text-sm text-foreground/60">
+          예비 사장님은 아직 사업자 인증 대상이 아니에요. 실제로 사업을
+          시작하시면 그때 인증해주세요!
+        </p>
+      </div>
+    );
+  }
+
   const status = await getCurrentVerificationStatus(session.user.id);
   const latest = await getMyLatestVerification(session.user.id);
 

@@ -55,7 +55,7 @@ export function SignupForm({
         return;
       }
 
-      router.push("/me");
+      router.push("/");
       router.refresh();
     } catch {
       setError("문제가 생겼어요. 잠시 후 다시 시도해주세요.");

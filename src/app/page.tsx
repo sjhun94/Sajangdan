@@ -25,24 +25,6 @@ const features = [
 export default function Home() {
   return (
     <div className="flex flex-1 flex-col">
-      <header className="mx-auto flex w-full max-w-5xl items-center justify-between px-6 py-6">
-        <span className="text-xl font-black tracking-tight">사장단</span>
-        <nav className="flex items-center gap-2 text-sm font-medium">
-          <Link
-            href="/login"
-            className="rounded-full px-4 py-2 text-foreground/70 transition-colors hover:text-foreground"
-          >
-            로그인
-          </Link>
-          <Link
-            href="/signup"
-            className="rounded-full bg-accent px-4 py-2 text-accent-foreground transition-opacity hover:opacity-90"
-          >
-            회원가입
-          </Link>
-        </nav>
-      </header>
-
       <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col px-6">
         <section className="flex flex-col items-center gap-6 py-20 text-center sm:py-28">
           <span className="rounded-full border border-foreground/15 px-4 py-1 text-xs font-medium text-foreground/60">
