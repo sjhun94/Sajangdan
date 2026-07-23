@@ -35,7 +35,7 @@ export function LoginForm() {
   return (
     <form onSubmit={handleSubmit} className="flex w-full flex-col gap-3">
       <input
-        type="email"
+        type="text"
         required
         placeholder="이메일"
         value={email}
