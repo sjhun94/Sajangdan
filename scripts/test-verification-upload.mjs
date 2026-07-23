@@ -28,6 +28,8 @@ const signupRes = await fetch(`${BASE}/api/auth/signup`, {
     email: EMAIL,
     password: PASSWORD,
     ownerStatus: "current",
+    region: "테스트구",
+    industrySlug: "cafe",
   }),
 });
 console.log("signup status:", signupRes.status, await signupRes.text());

@@ -10,12 +10,18 @@ create table if not exists users (
   oauth_provider text,               -- 'kakao' | 'google' | 'naver' | null (이메일 가입은 null)
   owner_status text not null default 'prospective'
     check (owner_status in ('current', 'prospective')), -- 현재 사장님 / 예비 사장님
+  region text,                       -- 동네명(예: 동작구). 가입 시 직접 입력
+  industry_slug text,                -- 내 업종. src/lib/industries.ts 목록 참고
   role text not null default 'user'
     check (role in ('user', 'admin')),
   business_verification_status text not null default 'none'
     check (business_verification_status in ('none', 'pending', 'approved', 'rejected')),
   created_at timestamptz not null default now()
 );
+
+-- 기존에 users 테이블이 이미 있던 경우를 위한 안전장치
+alter table users add column if not exists region text;
+alter table users add column if not exists industry_slug text;
 
 create index if not exists idx_users_email on users (email);
 

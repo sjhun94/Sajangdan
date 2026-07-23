@@ -1,4 +1,5 @@
 import { pool } from "@/lib/db";
+import { formatOwnerLabel } from "@/lib/anon";
 
 export type PostSummary = {
   id: string;
@@ -7,6 +8,7 @@ export type PostSummary = {
   like_count: number;
   comment_count: number;
   industry_slug: string | null;
+  author_label: string;
   created_at: string;
 };
 
@@ -15,6 +17,38 @@ export type PostDetail = PostSummary & {
   user_id: string; // 내부용(글쓴이 식별). 클라이언트 응답에는 절대 그대로 내려주지 않음
   liked_by_me: boolean;
 };
+
+type RawPostRow = {
+  id: string;
+  title: string;
+  content: string;
+  like_count: number;
+  comment_count: number;
+  industry_slug: string | null;
+  created_at: string;
+  author_region: string | null;
+  author_industry_slug: string | null;
+  author_owner_status: string;
+};
+
+function toSummary(row: RawPostRow): PostSummary {
+  const { author_region, author_industry_slug, author_owner_status, ...rest } =
+    row;
+  return {
+    ...rest,
+    author_label: formatOwnerLabel({
+      region: author_region,
+      industry_slug: author_industry_slug,
+      owner_status: author_owner_status,
+    }),
+  };
+}
+
+const SELECT_POST_WITH_AUTHOR = `
+  p.id, p.title, p.content, p.like_count, p.comment_count, p.industry_slug, p.created_at,
+  u.region as author_region, u.industry_slug as author_industry_slug,
+  u.owner_status as author_owner_status
+`;
 
 export async function listPosts({
   boardId,
@@ -31,28 +65,29 @@ export async function listPosts({
 }): Promise<PostSummary[]> {
   const offset = (page - 1) * pageSize;
   const params: unknown[] = [boardId];
-  let where = "board_id = $1 and deleted_at is null";
+  let where = "p.board_id = $1 and p.deleted_at is null";
 
   if (query) {
     params.push(`%${query}%`);
-    where += ` and (title ilike $${params.length} or content ilike $${params.length})`;
+    where += ` and (p.title ilike $${params.length} or p.content ilike $${params.length})`;
   }
   if (industrySlug) {
     params.push(industrySlug);
-    where += ` and industry_slug = $${params.length}`;
+    where += ` and p.industry_slug = $${params.length}`;
   }
 
   params.push(pageSize, offset);
 
-  const { rows } = await pool.query<PostSummary>(
-    `select id, title, content, like_count, comment_count, industry_slug, created_at
-     from posts
+  const { rows } = await pool.query<RawPostRow>(
+    `select ${SELECT_POST_WITH_AUTHOR}
+     from posts p
+     join users u on u.id = p.user_id
      where ${where}
-     order by created_at desc
+     order by p.created_at desc
      limit $${params.length - 1} offset $${params.length}`,
     params
   );
-  return rows;
+  return rows.map(toSummary);
 }
 
 export async function countPosts({
@@ -106,38 +141,57 @@ export async function searchAllPosts({
     [like]
   );
 
-  const { rows } = await pool.query<PostSearchResult>(
+  const { rows } = await pool.query<
+    RawPostRow & { board_slug: string; board_name: string }
+  >(
     `select
-       p.id, p.title, p.content, p.like_count, p.comment_count, p.industry_slug, p.created_at,
+       ${SELECT_POST_WITH_AUTHOR},
        b.slug as board_slug, b.name as board_name
      from posts p
      join boards b on b.id = p.board_id
+     join users u on u.id = p.user_id
      where p.deleted_at is null and (p.title ilike $1 or p.content ilike $1)
      order by p.created_at desc
      limit $2 offset $3`,
     [like, pageSize, offset]
   );
 
-  return { results: rows, total: Number(countRows[0].count) };
+  return {
+    results: rows.map((row) => ({
+      ...toSummary(row),
+      board_slug: row.board_slug,
+      board_name: row.board_name,
+    })),
+    total: Number(countRows[0].count),
+  };
 }
 
 export async function getPostById(
   id: string,
   currentUserId?: string
 ): Promise<PostDetail | null> {
-  const { rows } = await pool.query<PostDetail>(
+  const { rows } = await pool.query<RawPostRow & { board_id: string; user_id: string; liked_by_me: boolean }>(
     `select
-       p.id, p.board_id, p.user_id, p.title, p.content,
-       p.like_count, p.comment_count, p.industry_slug, p.created_at,
+       ${SELECT_POST_WITH_AUTHOR},
+       p.board_id, p.user_id,
        exists(
          select 1 from post_likes pl
          where pl.post_id = p.id and pl.user_id = $2
        ) as liked_by_me
      from posts p
+     join users u on u.id = p.user_id
      where p.id = $1 and p.deleted_at is null`,
     [id, currentUserId ?? null]
   );
-  return rows[0] ?? null;
+  const row = rows[0];
+  if (!row) return null;
+
+  return {
+    ...toSummary(row),
+    board_id: row.board_id,
+    user_id: row.user_id,
+    liked_by_me: row.liked_by_me,
+  };
 }
 
 export async function togglePostLike(

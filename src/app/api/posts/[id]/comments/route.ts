@@ -26,8 +26,8 @@ export async function POST(
     );
   }
 
-  const post = await pool.query<{ user_id: string }>(
-    `select user_id from posts where id = $1 and deleted_at is null`,
+  const post = await pool.query<{ id: string }>(
+    `select id from posts where id = $1 and deleted_at is null`,
     [postId]
   );
   if (!post.rows[0]) {
@@ -40,7 +40,6 @@ export async function POST(
   try {
     const comment = await createComment({
       postId,
-      authorId: post.rows[0].user_id,
       userId: session!.user.id,
       content: parsed.data.content,
       parentCommentId: parsed.data.parentCommentId,

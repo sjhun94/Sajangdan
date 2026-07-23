@@ -23,14 +23,14 @@ export default async function PostDetailPage({
   const post = await getPostById(postId, currentUserId);
   if (!post || post.board_id !== board.id) notFound();
 
-  const comments = await listComments(postId, post.user_id, currentUserId);
+  const comments = await listComments(postId, currentUserId);
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-8 px-6 py-16">
       <div className="flex flex-col gap-3 border-b border-foreground/10 pb-6">
         <div className="flex items-center gap-2">
           <span className="text-xs font-semibold text-foreground/70">
-            글쓴이
+            {post.author_label}
           </span>
           {post.industry_slug && (
             <span className="w-fit rounded-full bg-foreground/5 px-2 py-0.5 text-[11px] font-medium text-foreground/60">

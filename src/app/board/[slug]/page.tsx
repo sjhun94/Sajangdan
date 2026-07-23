@@ -102,7 +102,8 @@ export default async function BoardPage({
             )}
             <span className="font-medium">{post.title}</span>
             <span className="text-xs text-foreground/50">
-              익명 · 좋아요 {post.like_count} · 댓글 {post.comment_count}
+              {post.author_label} · 좋아요 {post.like_count} · 댓글{" "}
+              {post.comment_count}
             </span>
           </Link>
         ))}

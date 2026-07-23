@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
+import { INDUSTRIES } from "@/lib/industries";
 
 export function SignupForm({
   ownerStatus,
@@ -12,6 +13,8 @@ export function SignupForm({
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [region, setRegion] = useState("");
+  const [industrySlug, setIndustrySlug] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -24,7 +27,13 @@ export function SignupForm({
       const res = await fetch("/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, ownerStatus }),
+        body: JSON.stringify({
+          email,
+          password,
+          ownerStatus,
+          region,
+          industrySlug,
+        }),
       });
       const data = await res.json();
 
@@ -73,6 +82,28 @@ export function SignupForm({
         onChange={(e) => setPassword(e.target.value)}
         className="rounded-xl border border-foreground/15 bg-transparent px-4 py-3 text-sm outline-none focus:border-accent"
       />
+      <input
+        required
+        placeholder="동네 (예: 동작구)"
+        value={region}
+        onChange={(e) => setRegion(e.target.value)}
+        className="rounded-xl border border-foreground/15 bg-transparent px-4 py-3 text-sm outline-none focus:border-accent"
+      />
+      <select
+        required
+        value={industrySlug}
+        onChange={(e) => setIndustrySlug(e.target.value)}
+        className="rounded-xl border border-foreground/15 bg-transparent px-4 py-3 text-sm outline-none focus:border-accent"
+      >
+        <option value="" disabled>
+          {ownerStatus === "current" ? "내 업종 선택" : "관심 업종 선택"}
+        </option>
+        {INDUSTRIES.map((industry) => (
+          <option key={industry.slug} value={industry.slug}>
+            {industry.name}
+          </option>
+        ))}
+      </select>
       {error && <p className="text-sm text-red-500">{error}</p>}
       <button
         type="submit"

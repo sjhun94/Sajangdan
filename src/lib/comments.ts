@@ -1,5 +1,5 @@
 import { pool } from "@/lib/db";
-import { assignAnonNumber, anonLabel } from "@/lib/anon";
+import { formatOwnerLabel } from "@/lib/anon";
 
 export type CommentView = {
   id: string;
@@ -20,12 +20,13 @@ type CommentRow = {
   like_count: number;
   created_at: string;
   liked_by_me: boolean;
-  anon_number: number | null;
+  region: string | null;
+  industry_slug: string | null;
+  owner_status: string;
 };
 
 export async function listComments(
   postId: string,
-  authorId: string,
   currentUserId?: string
 ): Promise<CommentView[]> {
   const { rows } = await pool.query<CommentRow>(
@@ -35,14 +36,33 @@ export async function listComments(
          select 1 from comment_likes cl
          where cl.comment_id = c.id and cl.user_id = $2
        ) as liked_by_me,
-       pp.anon_number
+       u.region, u.industry_slug, u.owner_status
      from comments c
-     left join post_participants pp
-       on pp.post_id = c.post_id and pp.user_id = c.user_id
+     join users u on u.id = c.user_id
      where c.post_id = $1 and c.deleted_at is null
      order by c.created_at asc`,
     [postId, currentUserId ?? null]
   );
+
+  // 같은 라벨(동네+업종+구분)을 쓰는 서로 다른 사람이 이 글 안에 있으면
+  // 처음 등장한 순서대로 번호를 붙여 구분함 (예: "동작구 카페사장님 (2)")
+  const baseLabelByUser = new Map<string, string>();
+  const userOrderByLabel = new Map<string, string[]>();
+  for (const row of rows) {
+    if (baseLabelByUser.has(row.user_id)) continue;
+    const label = formatOwnerLabel(row);
+    baseLabelByUser.set(row.user_id, label);
+    const order = userOrderByLabel.get(label) ?? [];
+    order.push(row.user_id);
+    userOrderByLabel.set(label, order);
+  }
+
+  function labelFor(userId: string): string {
+    const base = baseLabelByUser.get(userId)!;
+    const order = userOrderByLabel.get(base)!;
+    if (order.length <= 1) return base;
+    return `${base} (${order.indexOf(userId) + 1})`;
+  }
 
   const toView = (row: CommentRow): CommentView => ({
     id: row.id,
@@ -50,7 +70,7 @@ export async function listComments(
     likeCount: row.like_count,
     likedByMe: row.liked_by_me,
     createdAt: row.created_at,
-    authorLabel: anonLabel(row.user_id === authorId ? null : row.anon_number),
+    authorLabel: labelFor(row.user_id),
     isMine: row.user_id === currentUserId,
     replies: [],
   });
@@ -78,13 +98,11 @@ export async function listComments(
 
 export async function createComment({
   postId,
-  authorId,
   userId,
   content,
   parentCommentId,
 }: {
   postId: string;
-  authorId: string;
   userId: string;
   content: string;
   parentCommentId?: string | null;
@@ -101,8 +119,6 @@ export async function createComment({
       throw new Error("NESTED_REPLY_NOT_ALLOWED");
     }
   }
-
-  await assignAnonNumber(postId, userId, authorId);
 
   const client = await pool.connect();
   try {
