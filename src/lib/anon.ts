@@ -12,8 +12,13 @@ export type OwnerLabelInfo = {
  */
 export function formatOwnerLabel(info: OwnerLabelInfo): string {
   const region = info.region?.trim() || "동네미상";
-  const industryShort = getIndustryShortName(info.industry_slug) ?? "사장";
-  return info.owner_status === "prospective"
+  const industryShort = getIndustryShortName(info.industry_slug);
+  const isProspective = info.owner_status === "prospective";
+
+  if (!industryShort) {
+    return isProspective ? `${region} 예비사장님` : `${region} 사장님`;
+  }
+  return isProspective
     ? `${region} ${industryShort} 예비사장님`
     : `${region} ${industryShort}사장님`;
 }
