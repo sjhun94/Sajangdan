@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { searchAllPosts } from "@/lib/posts";
+import { getIndustryName } from "@/lib/industries";
 import { Pagination, getTotalPages } from "@/components/board/pagination";
 
 export default async function SearchPage({
@@ -64,8 +65,15 @@ export default async function SearchPage({
             href={`/board/${post.board_slug}/${post.id}`}
             className="flex flex-col gap-1 py-4 hover:opacity-80"
           >
-            <span className="inline-flex w-fit rounded-full bg-foreground/5 px-2 py-0.5 text-[11px] font-medium text-foreground/60">
-              {post.board_name}
+            <span className="flex gap-1">
+              <span className="inline-flex w-fit rounded-full bg-foreground/5 px-2 py-0.5 text-[11px] font-medium text-foreground/60">
+                {post.board_name}
+              </span>
+              {post.industry_slug && (
+                <span className="inline-flex w-fit rounded-full bg-foreground/5 px-2 py-0.5 text-[11px] font-medium text-foreground/60">
+                  {getIndustryName(post.industry_slug)}
+                </span>
+              )}
             </span>
             <span className="font-medium">{post.title}</span>
             <span className="text-xs text-foreground/50">

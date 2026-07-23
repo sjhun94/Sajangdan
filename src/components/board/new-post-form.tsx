@@ -2,24 +2,38 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { INDUSTRIES } from "@/lib/industries";
 
 export function NewPostForm({ boardSlug }: { boardSlug: string }) {
   const router = useRouter();
+  const isIndustryBoard = boardSlug === "industry";
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
+  const [industrySlug, setIndustrySlug] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+
+    if (isIndustryBoard && !industrySlug) {
+      setError("업종을 선택해주세요.");
+      return;
+    }
+
     setLoading(true);
 
     try {
       const res = await fetch("/api/posts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ boardSlug, title, content }),
+        body: JSON.stringify({
+          boardSlug,
+          title,
+          content,
+          industrySlug: isIndustryBoard ? industrySlug : undefined,
+        }),
       });
       const data = await res.json().catch(() => null);
 
@@ -39,6 +53,23 @@ export function NewPostForm({ boardSlug }: { boardSlug: string }) {
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+      {isIndustryBoard && (
+        <select
+          required
+          value={industrySlug}
+          onChange={(e) => setIndustrySlug(e.target.value)}
+          className="rounded-xl border border-foreground/15 bg-transparent px-4 py-3 text-sm outline-none focus:border-accent"
+        >
+          <option value="" disabled>
+            업종을 선택하세요
+          </option>
+          {INDUSTRIES.map((industry) => (
+            <option key={industry.slug} value={industry.slug}>
+              {industry.name}
+            </option>
+          ))}
+        </select>
+      )}
       <input
         required
         placeholder="제목"

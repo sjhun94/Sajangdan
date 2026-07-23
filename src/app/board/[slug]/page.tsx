@@ -2,25 +2,29 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getBoardBySlug } from "@/lib/boards";
 import { countPosts, listPosts } from "@/lib/posts";
+import { getIndustryName } from "@/lib/industries";
 import { Pagination, getTotalPages } from "@/components/board/pagination";
+import { IndustryTabs } from "@/components/board/industry-tabs";
 
 export default async function BoardPage({
   params,
   searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ q?: string; page?: string }>;
+  searchParams: Promise<{ q?: string; page?: string; industry?: string }>;
 }) {
   const { slug } = await params;
-  const { q, page: pageParam } = await searchParams;
+  const { q, page: pageParam, industry } = await searchParams;
   const page = Math.max(1, Number(pageParam) || 1);
+  const isIndustryBoard = slug === "industry";
+  const industrySlug = isIndustryBoard ? industry : undefined;
 
   const board = await getBoardBySlug(slug);
   if (!board) notFound();
 
   const [posts, total] = await Promise.all([
-    listPosts({ boardId: board.id, query: q, page }),
-    countPosts({ boardId: board.id, query: q }),
+    listPosts({ boardId: board.id, query: q, industrySlug, page }),
+    countPosts({ boardId: board.id, query: q, industrySlug }),
   ]);
   const totalPages = getTotalPages(total);
 
@@ -36,7 +40,14 @@ export default async function BoardPage({
         </Link>
       </div>
 
+      {isIndustryBoard && (
+        <IndustryTabs slug={slug} active={industrySlug} q={q} />
+      )}
+
       <form className="flex gap-2">
+        {industrySlug && (
+          <input type="hidden" name="industry" value={industrySlug} />
+        )}
         <input
           type="text"
           name="q"
@@ -57,7 +68,14 @@ export default async function BoardPage({
           <span>
             &lsquo;{q}&rsquo; 검색결과 {total}건
           </span>
-          <Link href={`/board/${slug}`} className="font-medium text-accent">
+          <Link
+            href={
+              industrySlug
+                ? `/board/${slug}?industry=${industrySlug}`
+                : `/board/${slug}`
+            }
+            className="font-medium text-accent"
+          >
             검색 지우기
           </Link>
         </div>
@@ -77,6 +95,11 @@ export default async function BoardPage({
             href={`/board/${slug}/${post.id}`}
             className="flex flex-col gap-1 py-4 hover:opacity-80"
           >
+            {post.industry_slug && (
+              <span className="w-fit rounded-full bg-foreground/5 px-2 py-0.5 text-[11px] font-medium text-foreground/60">
+                {getIndustryName(post.industry_slug)}
+              </span>
+            )}
             <span className="font-medium">{post.title}</span>
             <span className="text-xs text-foreground/50">
               익명 · 좋아요 {post.like_count} · 댓글 {post.comment_count}
@@ -89,7 +112,7 @@ export default async function BoardPage({
         basePath={`/board/${slug}`}
         page={page}
         totalPages={totalPages}
-        extraParams={{ q }}
+        extraParams={{ q, industry: industrySlug }}
       />
     </div>
   );

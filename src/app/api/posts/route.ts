@@ -3,11 +3,15 @@ import { z } from "zod";
 import { requireUser } from "@/lib/authz";
 import { getBoardBySlug } from "@/lib/boards";
 import { createPost, listPosts } from "@/lib/posts";
+import { INDUSTRIES } from "@/lib/industries";
+
+const industrySlugs = INDUSTRIES.map((i) => i.slug) as [string, ...string[]];
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const slug = searchParams.get("board");
   const q = searchParams.get("q") ?? undefined;
+  const industry = searchParams.get("industry") ?? undefined;
   const page = Number(searchParams.get("page") ?? "1");
 
   if (!slug) {
@@ -25,7 +29,12 @@ export async function GET(request: Request) {
     );
   }
 
-  const posts = await listPosts({ boardId: board.id, query: q, page });
+  const posts = await listPosts({
+    boardId: board.id,
+    query: q,
+    industrySlug: industry,
+    page,
+  });
   return NextResponse.json({ posts });
 }
 
@@ -33,6 +42,7 @@ const createPostSchema = z.object({
   boardSlug: z.string(),
   title: z.string().min(1).max(200),
   content: z.string().min(1).max(10000),
+  industrySlug: z.enum(industrySlugs).optional(),
 });
 
 export async function POST(request: Request) {
@@ -56,11 +66,19 @@ export async function POST(request: Request) {
     );
   }
 
+  if (board.slug === "industry" && !parsed.data.industrySlug) {
+    return NextResponse.json(
+      { error: "업종을 선택해주세요." },
+      { status: 400 }
+    );
+  }
+
   const id = await createPost({
     boardId: board.id,
     userId: session!.user.id,
     title: parsed.data.title,
     content: parsed.data.content,
+    industrySlug: parsed.data.industrySlug,
   });
 
   return NextResponse.json({ id });

@@ -6,6 +6,7 @@ export type PostSummary = {
   content: string;
   like_count: number;
   comment_count: number;
+  industry_slug: string | null;
   created_at: string;
 };
 
@@ -18,11 +19,13 @@ export type PostDetail = PostSummary & {
 export async function listPosts({
   boardId,
   query,
+  industrySlug,
   page = 1,
   pageSize = 20,
 }: {
   boardId: string;
   query?: string;
+  industrySlug?: string;
   page?: number;
   pageSize?: number;
 }): Promise<PostSummary[]> {
@@ -34,11 +37,15 @@ export async function listPosts({
     params.push(`%${query}%`);
     where += ` and (title ilike $${params.length} or content ilike $${params.length})`;
   }
+  if (industrySlug) {
+    params.push(industrySlug);
+    where += ` and industry_slug = $${params.length}`;
+  }
 
   params.push(pageSize, offset);
 
   const { rows } = await pool.query<PostSummary>(
-    `select id, title, content, like_count, comment_count, created_at
+    `select id, title, content, like_count, comment_count, industry_slug, created_at
      from posts
      where ${where}
      order by created_at desc
@@ -51,9 +58,11 @@ export async function listPosts({
 export async function countPosts({
   boardId,
   query,
+  industrySlug,
 }: {
   boardId: string;
   query?: string;
+  industrySlug?: string;
 }): Promise<number> {
   const params: unknown[] = [boardId];
   let where = "board_id = $1 and deleted_at is null";
@@ -61,6 +70,10 @@ export async function countPosts({
   if (query) {
     params.push(`%${query}%`);
     where += ` and (title ilike $${params.length} or content ilike $${params.length})`;
+  }
+  if (industrySlug) {
+    params.push(industrySlug);
+    where += ` and industry_slug = $${params.length}`;
   }
 
   const { rows } = await pool.query<{ count: string }>(
@@ -95,7 +108,7 @@ export async function searchAllPosts({
 
   const { rows } = await pool.query<PostSearchResult>(
     `select
-       p.id, p.title, p.content, p.like_count, p.comment_count, p.created_at,
+       p.id, p.title, p.content, p.like_count, p.comment_count, p.industry_slug, p.created_at,
        b.slug as board_slug, b.name as board_name
      from posts p
      join boards b on b.id = p.board_id
@@ -115,7 +128,7 @@ export async function getPostById(
   const { rows } = await pool.query<PostDetail>(
     `select
        p.id, p.board_id, p.user_id, p.title, p.content,
-       p.like_count, p.comment_count, p.created_at,
+       p.like_count, p.comment_count, p.industry_slug, p.created_at,
        exists(
          select 1 from post_likes pl
          where pl.post_id = p.id and pl.user_id = $2
@@ -182,17 +195,19 @@ export async function createPost({
   userId,
   title,
   content,
+  industrySlug,
 }: {
   boardId: string;
   userId: string;
   title: string;
   content: string;
+  industrySlug?: string;
 }): Promise<string> {
   const { rows } = await pool.query<{ id: string }>(
-    `insert into posts (id, board_id, user_id, title, content)
-     values (gen_random_uuid(), $1, $2, $3, $4)
+    `insert into posts (id, board_id, user_id, title, content, industry_slug)
+     values (gen_random_uuid(), $1, $2, $3, $4, $5)
      returning id`,
-    [boardId, userId, title, content]
+    [boardId, userId, title, content, industrySlug ?? null]
   );
   return rows[0].id;
 }
