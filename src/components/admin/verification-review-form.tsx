@@ -5,8 +5,12 @@ import { useRouter } from "next/navigation";
 
 export function VerificationReviewForm({
   verificationId,
+  endpoint,
+  redirectTo,
 }: {
   verificationId: string;
+  endpoint: string;
+  redirectTo: string;
 }) {
   const router = useRouter();
   const [reason, setReason] = useState("");
@@ -22,7 +26,7 @@ export function VerificationReviewForm({
     setLoading(action);
 
     try {
-      const res = await fetch(`/api/admin/verifications/${verificationId}`, {
+      const res = await fetch(`${endpoint}/${verificationId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -38,7 +42,7 @@ export function VerificationReviewForm({
         return;
       }
 
-      router.push("/admin/verifications");
+      router.push(redirectTo);
       router.refresh();
     } catch {
       setError("문제가 생겼어요. 잠시 후 다시 시도해주세요.");

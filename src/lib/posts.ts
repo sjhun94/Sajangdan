@@ -31,17 +31,30 @@ type RawPostRow = {
   author_region: string | null;
   author_industry_slug: string | null;
   author_owner_status: string;
+  author_revenue_verification_status: string;
+  author_revenue_tier: string | null;
+  author_years_in_business: number | null;
 };
 
 function toSummary(row: RawPostRow): PostSummary {
-  const { author_region, author_industry_slug, author_owner_status, ...rest } =
-    row;
+  const {
+    author_region,
+    author_industry_slug,
+    author_owner_status,
+    author_revenue_verification_status,
+    author_revenue_tier,
+    author_years_in_business,
+    ...rest
+  } = row;
   return {
     ...rest,
     author_label: formatOwnerLabel({
       region: author_region,
       industry_slug: author_industry_slug,
       owner_status: author_owner_status,
+      revenue_verification_status: author_revenue_verification_status,
+      revenue_tier: author_revenue_tier,
+      years_in_business: author_years_in_business,
     }),
   };
 }
@@ -49,7 +62,10 @@ function toSummary(row: RawPostRow): PostSummary {
 const SELECT_POST_WITH_AUTHOR = `
   p.id, p.title, p.content, p.like_count, p.comment_count, p.view_count, p.industry_slug, p.created_at,
   u.region as author_region, u.industry_slug as author_industry_slug,
-  u.owner_status as author_owner_status
+  u.owner_status as author_owner_status,
+  u.revenue_verification_status as author_revenue_verification_status,
+  u.revenue_tier as author_revenue_tier,
+  u.years_in_business as author_years_in_business
 `;
 
 export async function listPosts({

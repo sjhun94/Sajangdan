@@ -16,12 +16,19 @@ create table if not exists users (
     check (role in ('user', 'admin')),
   business_verification_status text not null default 'none'
     check (business_verification_status in ('none', 'pending', 'approved', 'rejected')),
+  revenue_verification_status text not null default 'none'
+    check (revenue_verification_status in ('none', 'pending', 'approved', 'rejected')),
+  revenue_tier text,        -- '1'|'3'|'5'|'10'|'30'|'50'|'100' (억 단위 이상). 승인된 값만 반영
+  years_in_business int,    -- 몇 년차. 승인된 값만 반영
   created_at timestamptz not null default now()
 );
 
 -- 기존에 users 테이블이 이미 있던 경우를 위한 안전장치
 alter table users add column if not exists region text;
 alter table users add column if not exists industry_slug text;
+alter table users add column if not exists revenue_verification_status text not null default 'none';
+alter table users add column if not exists revenue_tier text;
+alter table users add column if not exists years_in_business int;
 
 create index if not exists idx_users_email on users (email);
 
@@ -115,6 +122,24 @@ create table if not exists business_verifications (
 
 create index if not exists idx_business_verifications_status on business_verifications (status);
 create index if not exists idx_business_verifications_user on business_verifications (user_id);
+
+create table if not exists revenue_verifications (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references users(id),
+  revenue_tier text not null,   -- 신청 시 자기신고 값. '1'|'3'|'5'|'10'|'30'|'50'|'100'
+  years_in_business int not null,
+  blob_url text not null,       -- 홈택스/국세청 증명서 이미지
+  original_filename text,
+  status text not null default 'pending'
+    check (status in ('pending', 'approved', 'rejected')),
+  reviewer_admin_id uuid references users(id),
+  reject_reason text,
+  submitted_at timestamptz not null default now(),
+  reviewed_at timestamptz
+);
+
+create index if not exists idx_revenue_verifications_status on revenue_verifications (status);
+create index if not exists idx_revenue_verifications_user on revenue_verifications (user_id);
 
 insert into boards (slug, name, description, sort_order) values
   ('free', '자유게시판', '자유롭게 이야기 나누는 공간', 0),

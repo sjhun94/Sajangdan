@@ -3,6 +3,9 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { SignOutButton } from "@/components/auth/sign-out-button";
 import { getCurrentVerificationStatus } from "@/lib/verifications";
+import { getCurrentRevenueVerificationStatus } from "@/lib/revenueVerifications";
+import { getRevenueTierLabel } from "@/lib/revenue";
+import { pool } from "@/lib/db";
 
 const ownerStatusLabel: Record<string, string> = {
   current: "현재 사장님",
@@ -26,6 +29,22 @@ export default async function MePage() {
   const businessVerificationStatus = await getCurrentVerificationStatus(
     session.user.id
   );
+  const revenueVerificationStatus = await getCurrentRevenueVerificationStatus(
+    session.user.id
+  );
+
+  let revenueTier: string | null = null;
+  let yearsInBusiness: number | null = null;
+  if (revenueVerificationStatus === "approved") {
+    const { rows } = await pool.query<{
+      revenue_tier: string | null;
+      years_in_business: number | null;
+    }>(`select revenue_tier, years_in_business from users where id = $1`, [
+      session.user.id,
+    ]);
+    revenueTier = rows[0]?.revenue_tier ?? null;
+    yearsInBusiness = rows[0]?.years_in_business ?? null;
+  }
 
   return (
     <div className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center gap-4 px-6">
@@ -48,6 +67,17 @@ export default async function MePage() {
             </dd>
           </div>
         )}
+        {ownerStatus === "current" && businessVerificationStatus === "approved" && (
+          <div className="flex justify-between">
+            <dt className="text-foreground/50">매출/연차 인증</dt>
+            <dd>
+              {revenueVerificationStatus === "approved"
+                ? `${yearsInBusiness}년차 · ${getRevenueTierLabel(revenueTier)}`
+                : verificationLabel[revenueVerificationStatus] ??
+                  revenueVerificationStatus}
+            </dd>
+          </div>
+        )}
         {role === "admin" && (
           <div className="flex justify-between">
             <dt className="text-foreground/50">권한</dt>
@@ -63,12 +93,30 @@ export default async function MePage() {
           사업자 인증하러 가기
         </Link>
       )}
+      {ownerStatus === "current" &&
+        businessVerificationStatus === "approved" &&
+        revenueVerificationStatus !== "approved" && (
+          <Link
+            href="/verify-revenue"
+            className="rounded-full bg-accent px-6 py-3 text-center text-sm font-semibold text-accent-foreground transition-opacity hover:opacity-90"
+          >
+            매출/연차 인증하러 가기
+          </Link>
+        )}
       {role === "admin" && (
         <Link
           href="/admin/verifications"
           className="rounded-full border border-foreground/15 px-6 py-3 text-center text-sm font-semibold transition-colors hover:bg-foreground/5"
         >
           관리자: 사업자 인증 심사
+        </Link>
+      )}
+      {role === "admin" && (
+        <Link
+          href="/admin/revenue-verifications"
+          className="rounded-full border border-foreground/15 px-6 py-3 text-center text-sm font-semibold transition-colors hover:bg-foreground/5"
+        >
+          관리자: 매출/연차 인증 심사
         </Link>
       )}
       <SignOutButton />

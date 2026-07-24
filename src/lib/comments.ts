@@ -23,6 +23,9 @@ type CommentRow = {
   region: string | null;
   industry_slug: string | null;
   owner_status: string;
+  revenue_verification_status: string;
+  revenue_tier: string | null;
+  years_in_business: number | null;
 };
 
 export async function listComments(
@@ -36,7 +39,8 @@ export async function listComments(
          select 1 from comment_likes cl
          where cl.comment_id = c.id and cl.user_id = $2
        ) as liked_by_me,
-       u.region, u.industry_slug, u.owner_status
+       u.region, u.industry_slug, u.owner_status,
+       u.revenue_verification_status, u.revenue_tier, u.years_in_business
      from comments c
      join users u on u.id = c.user_id
      where c.post_id = $1 and c.deleted_at is null
