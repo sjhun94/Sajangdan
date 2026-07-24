@@ -5,16 +5,41 @@ import { useRouter } from "next/navigation";
 import { INDUSTRIES } from "@/lib/industries";
 import { TOPICS } from "@/lib/topics";
 
+const MAX_POLL_OPTIONS = 6;
+const MIN_POLL_OPTIONS = 2;
+
 export function NewPostForm({ boardSlug }: { boardSlug: string }) {
   const router = useRouter();
   const isIndustryBoard = boardSlug === "industry";
   const isTopicBoard = boardSlug === "topic";
+  const isPollBoard = boardSlug === "poll";
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [industrySlug, setIndustrySlug] = useState("");
   const [topicSlug, setTopicSlug] = useState("");
+  const [pollOptions, setPollOptions] = useState(["", ""]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  function updatePollOption(index: number, value: string) {
+    setPollOptions((prev) =>
+      prev.map((option, i) => (i === index ? value : option))
+    );
+  }
+
+  function addPollOption() {
+    setPollOptions((prev) =>
+      prev.length < MAX_POLL_OPTIONS ? [...prev, ""] : prev
+    );
+  }
+
+  function removePollOption(index: number) {
+    setPollOptions((prev) =>
+      prev.length > MIN_POLL_OPTIONS
+        ? prev.filter((_, i) => i !== index)
+        : prev
+    );
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -26,6 +51,11 @@ export function NewPostForm({ boardSlug }: { boardSlug: string }) {
     }
     if (isTopicBoard && !topicSlug) {
       setError("주제를 선택해주세요.");
+      return;
+    }
+    const trimmedOptions = pollOptions.map((o) => o.trim()).filter(Boolean);
+    if (isPollBoard && trimmedOptions.length < MIN_POLL_OPTIONS) {
+      setError("선택지를 2개 이상 입력해주세요.");
       return;
     }
 
@@ -41,6 +71,7 @@ export function NewPostForm({ boardSlug }: { boardSlug: string }) {
           content,
           industrySlug: isIndustryBoard ? industrySlug : undefined,
           topicSlug: isTopicBoard ? topicSlug : undefined,
+          pollOptions: isPollBoard ? trimmedOptions : undefined,
         }),
       });
       const data = await res.json().catch(() => null);
@@ -107,9 +138,45 @@ export function NewPostForm({ boardSlug }: { boardSlug: string }) {
         placeholder="내용을 입력하세요"
         value={content}
         onChange={(e) => setContent(e.target.value)}
-        rows={10}
+        rows={isPollBoard ? 5 : 10}
         className="rounded-xl border border-foreground/15 bg-transparent px-4 py-3 text-sm outline-none focus:border-accent"
       />
+      {isPollBoard && (
+        <div className="flex flex-col gap-2 rounded-xl border border-foreground/15 p-3">
+          <span className="text-xs font-medium text-foreground/60">
+            투표 선택지 (2~{MAX_POLL_OPTIONS}개)
+          </span>
+          {pollOptions.map((option, index) => (
+            <div key={index} className="flex gap-2">
+              <input
+                required
+                placeholder={`선택지 ${index + 1}`}
+                value={option}
+                onChange={(e) => updatePollOption(index, e.target.value)}
+                className="flex-1 rounded-xl border border-foreground/15 bg-transparent px-4 py-2 text-sm outline-none focus:border-accent"
+              />
+              {pollOptions.length > MIN_POLL_OPTIONS && (
+                <button
+                  type="button"
+                  onClick={() => removePollOption(index)}
+                  className="rounded-xl border border-foreground/15 px-3 text-sm text-foreground/50 hover:text-foreground"
+                >
+                  삭제
+                </button>
+              )}
+            </div>
+          ))}
+          {pollOptions.length < MAX_POLL_OPTIONS && (
+            <button
+              type="button"
+              onClick={addPollOption}
+              className="rounded-xl border border-dashed border-foreground/20 px-4 py-2 text-sm text-foreground/60 hover:border-accent hover:text-accent"
+            >
+              + 선택지 추가
+            </button>
+          )}
+        </div>
+      )}
       {error && <p className="text-sm text-red-500">{error}</p>}
       <button
         type="submit"

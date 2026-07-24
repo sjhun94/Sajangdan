@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireUser } from "@/lib/authz";
 import { getBoardBySlug } from "@/lib/boards";
 import { createPost, listPosts } from "@/lib/posts";
+import { createPollOptions } from "@/lib/polls";
 import { INDUSTRIES } from "@/lib/industries";
 import { TOPICS } from "@/lib/topics";
 
@@ -48,6 +49,7 @@ const createPostSchema = z.object({
   content: z.string().min(1).max(10000),
   industrySlug: z.enum(industrySlugs).optional(),
   topicSlug: z.enum(topicSlugs).optional(),
+  pollOptions: z.array(z.string().trim().min(1).max(100)).min(2).max(6).optional(),
 });
 
 export async function POST(request: Request) {
@@ -83,6 +85,14 @@ export async function POST(request: Request) {
       { status: 400 }
     );
   }
+  if (board.slug === "poll") {
+    if (!parsed.data.pollOptions || parsed.data.pollOptions.length < 2) {
+      return NextResponse.json(
+        { error: "선택지를 2개 이상 입력해주세요." },
+        { status: 400 }
+      );
+    }
+  }
 
   const id = await createPost({
     boardId: board.id,
@@ -92,6 +102,10 @@ export async function POST(request: Request) {
     industrySlug: parsed.data.industrySlug,
     topicSlug: parsed.data.topicSlug,
   });
+
+  if (board.slug === "poll" && parsed.data.pollOptions) {
+    await createPollOptions(id, parsed.data.pollOptions);
+  }
 
   return NextResponse.json({ id });
 }

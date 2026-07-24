@@ -5,8 +5,10 @@ import { getPostById, incrementViewCount } from "@/lib/posts";
 import { getIndustryName } from "@/lib/industries";
 import { getTopicName } from "@/lib/topics";
 import { listComments } from "@/lib/comments";
+import { getPollForPost } from "@/lib/polls";
 import { LikeButton } from "@/components/board/like-button";
 import { CommentSection } from "@/components/board/comment-section";
+import { PollDisplay } from "@/components/board/poll-display";
 
 export default async function PostDetailPage({
   params,
@@ -26,6 +28,7 @@ export default async function PostDetailPage({
   if (!post || post.board_id !== board.id) notFound();
 
   const comments = await listComments(postId, currentUserId);
+  const poll = await getPollForPost(postId, currentUserId);
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-8 px-6 py-16">
@@ -57,6 +60,15 @@ export default async function PostDetailPage({
           </span>
         </div>
       </div>
+
+      {poll && (
+        <PollDisplay
+          postId={post.id}
+          initialOptions={poll.options}
+          initialTotalVotes={poll.totalVotes}
+          isLoggedIn={!!currentUserId}
+        />
+      )}
 
       <CommentSection
         postId={post.id}

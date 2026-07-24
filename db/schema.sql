@@ -145,11 +145,38 @@ create table if not exists revenue_verifications (
 create index if not exists idx_revenue_verifications_status on revenue_verifications (status);
 create index if not exists idx_revenue_verifications_user on revenue_verifications (user_id);
 
+-- 투표/토론 게시판: 게시글에 딸린 투표 선택지와 투표 기록
+create table if not exists poll_options (
+  id uuid primary key default gen_random_uuid(),
+  post_id uuid not null references posts(id),
+  label text not null,
+  vote_count int not null default 0,
+  sort_order int not null default 0,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists idx_poll_options_post on poll_options (post_id, sort_order);
+
+create table if not exists poll_votes (
+  id uuid primary key default gen_random_uuid(),
+  post_id uuid not null references posts(id),
+  option_id uuid not null references poll_options(id),
+  user_id uuid not null references users(id),
+  created_at timestamptz not null default now(),
+  unique (post_id, user_id) -- 한 글에 한 사람당 투표 1개 (다른 선택지로 변경은 가능)
+);
+
+create index if not exists idx_poll_votes_post on poll_votes (post_id);
+
 insert into boards (slug, name, description, sort_order) values
-  ('free', '자유게시판', '자유롭게 이야기 나누는 공간', 0),
+  ('free', '익명게시판', '자유롭게 이야기 나누는 공간', 0),
   ('industry', '업종별 게시판', '같은 업종 사장님들끼리 나누는 이야기', 1),
   ('local', '우리동네 게시판', '지역 기반으로 나누는 동네 정보와 이야기', 2),
   ('franchise', '프랜차이즈 게시판', '프랜차이즈 창업, 운영, 본사 관련 이야기', 3),
   ('topic', '주제별 게시판', '회계, 세무, 마케팅 등 주제별 정보 공유', 4),
-  ('info', '자영업자 알짜정보', '정부지원 등 자영업자에게 유용한 알짜 정보 공유', 5)
+  ('info', '자영업자 알짜정보', '정부지원 등 자영업자에게 유용한 알짜 정보 공유', 5),
+  ('poll', '투표/토론 게시판', '폐업 고민, 잘잘못 가리기 등 투표로 의견을 모으는 공간', 6)
 on conflict (slug) do nothing;
+
+-- 기존에 '자유게시판'으로 만들어진 boards row가 있으면 이름만 새로 갱신
+update boards set name = '익명게시판' where slug = 'free' and name = '자유게시판';
