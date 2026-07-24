@@ -3,13 +3,16 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { INDUSTRIES } from "@/lib/industries";
+import { TOPICS } from "@/lib/topics";
 
 export function NewPostForm({ boardSlug }: { boardSlug: string }) {
   const router = useRouter();
   const isIndustryBoard = boardSlug === "industry";
+  const isTopicBoard = boardSlug === "topic";
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [industrySlug, setIndustrySlug] = useState("");
+  const [topicSlug, setTopicSlug] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -19,6 +22,10 @@ export function NewPostForm({ boardSlug }: { boardSlug: string }) {
 
     if (isIndustryBoard && !industrySlug) {
       setError("업종을 선택해주세요.");
+      return;
+    }
+    if (isTopicBoard && !topicSlug) {
+      setError("주제를 선택해주세요.");
       return;
     }
 
@@ -33,6 +40,7 @@ export function NewPostForm({ boardSlug }: { boardSlug: string }) {
           title,
           content,
           industrySlug: isIndustryBoard ? industrySlug : undefined,
+          topicSlug: isTopicBoard ? topicSlug : undefined,
         }),
       });
       const data = await res.json().catch(() => null);
@@ -66,6 +74,23 @@ export function NewPostForm({ boardSlug }: { boardSlug: string }) {
           {INDUSTRIES.map((industry) => (
             <option key={industry.slug} value={industry.slug}>
               {industry.name}
+            </option>
+          ))}
+        </select>
+      )}
+      {isTopicBoard && (
+        <select
+          required
+          value={topicSlug}
+          onChange={(e) => setTopicSlug(e.target.value)}
+          className="rounded-xl border border-foreground/15 bg-transparent px-4 py-3 text-sm outline-none focus:border-accent"
+        >
+          <option value="" disabled>
+            주제를 선택하세요
+          </option>
+          {TOPICS.map((topic) => (
+            <option key={topic.slug} value={topic.slug}>
+              {topic.name}
             </option>
           ))}
         </select>

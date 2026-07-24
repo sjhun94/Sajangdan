@@ -4,14 +4,17 @@ import { requireUser } from "@/lib/authz";
 import { getBoardBySlug } from "@/lib/boards";
 import { createPost, listPosts } from "@/lib/posts";
 import { INDUSTRIES } from "@/lib/industries";
+import { TOPICS } from "@/lib/topics";
 
 const industrySlugs = INDUSTRIES.map((i) => i.slug) as [string, ...string[]];
+const topicSlugs = TOPICS.map((t) => t.slug) as [string, ...string[]];
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const slug = searchParams.get("board");
   const q = searchParams.get("q") ?? undefined;
   const industry = searchParams.get("industry") ?? undefined;
+  const topic = searchParams.get("topic") ?? undefined;
   const page = Number(searchParams.get("page") ?? "1");
 
   if (!slug) {
@@ -33,6 +36,7 @@ export async function GET(request: Request) {
     boardId: board.id,
     query: q,
     industrySlug: industry,
+    topicSlug: topic,
     page,
   });
   return NextResponse.json({ posts });
@@ -43,6 +47,7 @@ const createPostSchema = z.object({
   title: z.string().min(1).max(200),
   content: z.string().min(1).max(10000),
   industrySlug: z.enum(industrySlugs).optional(),
+  topicSlug: z.enum(topicSlugs).optional(),
 });
 
 export async function POST(request: Request) {
@@ -72,6 +77,12 @@ export async function POST(request: Request) {
       { status: 400 }
     );
   }
+  if (board.slug === "topic" && !parsed.data.topicSlug) {
+    return NextResponse.json(
+      { error: "주제를 선택해주세요." },
+      { status: 400 }
+    );
+  }
 
   const id = await createPost({
     boardId: board.id,
@@ -79,6 +90,7 @@ export async function POST(request: Request) {
     title: parsed.data.title,
     content: parsed.data.content,
     industrySlug: parsed.data.industrySlug,
+    topicSlug: parsed.data.topicSlug,
   });
 
   return NextResponse.json({ id });

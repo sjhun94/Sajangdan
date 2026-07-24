@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { searchAllPosts } from "@/lib/posts";
 import { getIndustryName } from "@/lib/industries";
+import { getTopicName } from "@/lib/topics";
 import { formatShortDate } from "@/lib/format";
 import { Pagination, getTotalPages } from "@/components/board/pagination";
 
@@ -70,9 +71,10 @@ export default async function SearchPage({
               <span className="inline-flex w-fit rounded-full bg-foreground/5 px-2 py-0.5 text-[11px] font-medium text-foreground/60">
                 {post.board_name}
               </span>
-              {post.industry_slug && (
+              {(post.industry_slug || post.topic_slug) && (
                 <span className="inline-flex w-fit rounded-full bg-foreground/5 px-2 py-0.5 text-[11px] font-medium text-foreground/60">
-                  {getIndustryName(post.industry_slug)}
+                  {getIndustryName(post.industry_slug) ??
+                    getTopicName(post.topic_slug)}
                 </span>
               )}
             </span>

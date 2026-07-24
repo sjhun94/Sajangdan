@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { getBoardBySlug } from "@/lib/boards";
 import { getPostById, incrementViewCount } from "@/lib/posts";
 import { getIndustryName } from "@/lib/industries";
+import { getTopicName } from "@/lib/topics";
 import { listComments } from "@/lib/comments";
 import { LikeButton } from "@/components/board/like-button";
 import { CommentSection } from "@/components/board/comment-section";
@@ -33,9 +34,10 @@ export default async function PostDetailPage({
           <span className="text-xs font-semibold text-foreground/70">
             {post.author_label}
           </span>
-          {post.industry_slug && (
+          {(post.industry_slug || post.topic_slug) && (
             <span className="w-fit rounded-full bg-foreground/5 px-2 py-0.5 text-[11px] font-medium text-foreground/60">
-              {getIndustryName(post.industry_slug)}
+              {getIndustryName(post.industry_slug) ??
+                getTopicName(post.topic_slug)}
             </span>
           )}
         </div>

@@ -3,29 +3,40 @@ import { notFound } from "next/navigation";
 import { getBoardBySlug } from "@/lib/boards";
 import { countPosts, listPosts } from "@/lib/posts";
 import { getIndustryName } from "@/lib/industries";
+import { getTopicName } from "@/lib/topics";
 import { formatShortDate } from "@/lib/format";
 import { Pagination, getTotalPages } from "@/components/board/pagination";
 import { IndustryTabs } from "@/components/board/industry-tabs";
+import { TopicTabs } from "@/components/board/topic-tabs";
 
 export default async function BoardPage({
   params,
   searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ q?: string; page?: string; industry?: string }>;
+  searchParams: Promise<{
+    q?: string;
+    page?: string;
+    industry?: string;
+    topic?: string;
+  }>;
 }) {
   const { slug } = await params;
-  const { q, page: pageParam, industry } = await searchParams;
+  const { q, page: pageParam, industry, topic } = await searchParams;
   const page = Math.max(1, Number(pageParam) || 1);
   const isIndustryBoard = slug === "industry";
+  const isTopicBoard = slug === "topic";
   const industrySlug = isIndustryBoard ? industry : undefined;
+  const topicSlug = isTopicBoard ? topic : undefined;
+  const activeFilter = industrySlug ?? topicSlug;
+  const filterParamName = isIndustryBoard ? "industry" : "topic";
 
   const board = await getBoardBySlug(slug);
   if (!board) notFound();
 
   const [posts, total] = await Promise.all([
-    listPosts({ boardId: board.id, query: q, industrySlug, page }),
-    countPosts({ boardId: board.id, query: q, industrySlug }),
+    listPosts({ boardId: board.id, query: q, industrySlug, topicSlug, page }),
+    countPosts({ boardId: board.id, query: q, industrySlug, topicSlug }),
   ]);
   const totalPages = getTotalPages(total);
 
@@ -44,10 +55,11 @@ export default async function BoardPage({
       {isIndustryBoard && (
         <IndustryTabs slug={slug} active={industrySlug} q={q} />
       )}
+      {isTopicBoard && <TopicTabs slug={slug} active={topicSlug} q={q} />}
 
       <form className="flex gap-2">
-        {industrySlug && (
-          <input type="hidden" name="industry" value={industrySlug} />
+        {activeFilter && (
+          <input type="hidden" name={filterParamName} value={activeFilter} />
         )}
         <input
           type="text"
@@ -71,8 +83,8 @@ export default async function BoardPage({
           </span>
           <Link
             href={
-              industrySlug
-                ? `/board/${slug}?industry=${industrySlug}`
+              activeFilter
+                ? `/board/${slug}?${filterParamName}=${activeFilter}`
                 : `/board/${slug}`
             }
             className="font-medium text-accent"
@@ -96,9 +108,10 @@ export default async function BoardPage({
             href={`/board/${slug}/${post.id}`}
             className="flex flex-col gap-1 py-4 hover:opacity-80"
           >
-            {post.industry_slug && (
+            {(post.industry_slug || post.topic_slug) && (
               <span className="w-fit rounded-full bg-foreground/5 px-2 py-0.5 text-[11px] font-medium text-foreground/60">
-                {getIndustryName(post.industry_slug)}
+                {getIndustryName(post.industry_slug) ??
+                  getTopicName(post.topic_slug)}
               </span>
             )}
             <span className="font-medium">{post.title}</span>
@@ -115,7 +128,7 @@ export default async function BoardPage({
         basePath={`/board/${slug}`}
         page={page}
         totalPages={totalPages}
-        extraParams={{ q, industry: industrySlug }}
+        extraParams={{ q, [filterParamName]: activeFilter }}
       />
     </div>
   );

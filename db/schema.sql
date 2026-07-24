@@ -52,11 +52,15 @@ create table if not exists posts (
   view_count int not null default 0,
   next_anon_number int not null default 1, -- 이 글 안에서 다음에 부여할 "익명N" 번호
   industry_slug text, -- 업종별 게시판에서만 사용. src/lib/industries.ts 목록 참고
+  topic_slug text, -- 주제별 게시판에서만 사용. src/lib/topics.ts 목록 참고
   created_at timestamptz not null default now(),
   deleted_at timestamptz
 );
 
 alter table posts add column if not exists view_count int not null default 0;
+alter table posts add column if not exists topic_slug text;
+
+create index if not exists idx_posts_topic on posts (board_id, topic_slug, created_at desc);
 
 -- 기존에 posts 테이블이 이미 있던 경우를 위한 안전장치 (없으면 컬럼 추가)
 alter table posts add column if not exists next_anon_number int not null default 1;

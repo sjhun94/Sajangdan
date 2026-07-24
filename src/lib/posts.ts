@@ -9,6 +9,7 @@ export type PostSummary = {
   comment_count: number;
   view_count: number;
   industry_slug: string | null;
+  topic_slug: string | null;
   author_label: string;
   created_at: string;
 };
@@ -27,6 +28,7 @@ type RawPostRow = {
   comment_count: number;
   view_count: number;
   industry_slug: string | null;
+  topic_slug: string | null;
   created_at: string;
   author_region: string | null;
   author_industry_slug: string | null;
@@ -60,7 +62,7 @@ function toSummary(row: RawPostRow): PostSummary {
 }
 
 const SELECT_POST_WITH_AUTHOR = `
-  p.id, p.title, p.content, p.like_count, p.comment_count, p.view_count, p.industry_slug, p.created_at,
+  p.id, p.title, p.content, p.like_count, p.comment_count, p.view_count, p.industry_slug, p.topic_slug, p.created_at,
   u.region as author_region, u.industry_slug as author_industry_slug,
   u.owner_status as author_owner_status,
   u.revenue_verification_status as author_revenue_verification_status,
@@ -72,12 +74,14 @@ export async function listPosts({
   boardId,
   query,
   industrySlug,
+  topicSlug,
   page = 1,
   pageSize = 20,
 }: {
   boardId: string;
   query?: string;
   industrySlug?: string;
+  topicSlug?: string;
   page?: number;
   pageSize?: number;
 }): Promise<PostSummary[]> {
@@ -92,6 +96,10 @@ export async function listPosts({
   if (industrySlug) {
     params.push(industrySlug);
     where += ` and p.industry_slug = $${params.length}`;
+  }
+  if (topicSlug) {
+    params.push(topicSlug);
+    where += ` and p.topic_slug = $${params.length}`;
   }
 
   params.push(pageSize, offset);
@@ -112,10 +120,12 @@ export async function countPosts({
   boardId,
   query,
   industrySlug,
+  topicSlug,
 }: {
   boardId: string;
   query?: string;
   industrySlug?: string;
+  topicSlug?: string;
 }): Promise<number> {
   const params: unknown[] = [boardId];
   let where = "board_id = $1 and deleted_at is null";
@@ -127,6 +137,10 @@ export async function countPosts({
   if (industrySlug) {
     params.push(industrySlug);
     where += ` and industry_slug = $${params.length}`;
+  }
+  if (topicSlug) {
+    params.push(topicSlug);
+    where += ` and topic_slug = $${params.length}`;
   }
 
   const { rows } = await pool.query<{ count: string }>(
@@ -274,18 +288,20 @@ export async function createPost({
   title,
   content,
   industrySlug,
+  topicSlug,
 }: {
   boardId: string;
   userId: string;
   title: string;
   content: string;
   industrySlug?: string;
+  topicSlug?: string;
 }): Promise<string> {
   const { rows } = await pool.query<{ id: string }>(
-    `insert into posts (id, board_id, user_id, title, content, industry_slug)
-     values (gen_random_uuid(), $1, $2, $3, $4, $5)
+    `insert into posts (id, board_id, user_id, title, content, industry_slug, topic_slug)
+     values (gen_random_uuid(), $1, $2, $3, $4, $5, $6)
      returning id`,
-    [boardId, userId, title, content, industrySlug ?? null]
+    [boardId, userId, title, content, industrySlug ?? null, topicSlug ?? null]
   );
   return rows[0].id;
 }
