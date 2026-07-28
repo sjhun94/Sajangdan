@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { MessagesSquare, ShieldCheck, Search } from "lucide-react";
+import { auth } from "@/auth";
 
 const features = [
   {
@@ -22,7 +23,10 @@ const features = [
   },
 ];
 
-export default function Home() {
+export default async function Home() {
+  const session = await auth();
+  const isLoggedIn = !!session?.user;
+
   return (
     <div className="flex flex-1 flex-col">
       <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col px-6">
@@ -38,18 +42,29 @@ export default function Home() {
             편하게 나눠보세요.
           </p>
           <div className="mt-2 flex flex-col gap-3 sm:flex-row">
-            <Link
-              href="/signup"
-              className="rounded-full bg-accent px-8 py-3 text-base font-semibold text-accent-foreground transition-opacity hover:opacity-90"
-            >
-              무료로 시작하기
-            </Link>
-            <Link
-              href="/board"
-              className="rounded-full border border-foreground/15 px-8 py-3 text-base font-semibold text-foreground transition-colors hover:bg-foreground/5"
-            >
-              둘러보기
-            </Link>
+            {isLoggedIn ? (
+              <Link
+                href="/board"
+                className="rounded-full bg-accent px-8 py-3 text-base font-semibold text-accent-foreground transition-opacity hover:opacity-90"
+              >
+                게시판 가기
+              </Link>
+            ) : (
+              <>
+                <Link
+                  href="/signup"
+                  className="rounded-full bg-accent px-8 py-3 text-base font-semibold text-accent-foreground transition-opacity hover:opacity-90"
+                >
+                  무료로 시작하기
+                </Link>
+                <Link
+                  href="/board"
+                  className="rounded-full border border-foreground/15 px-8 py-3 text-base font-semibold text-foreground transition-colors hover:bg-foreground/5"
+                >
+                  둘러보기
+                </Link>
+              </>
+            )}
           </div>
         </section>
 
