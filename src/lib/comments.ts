@@ -111,9 +111,13 @@ export async function createComment({
   content: string;
   parentCommentId?: string | null;
 }): Promise<{ id: string }> {
+  let parentAuthorId: string | null = null;
   if (parentCommentId) {
-    const parent = await pool.query<{ parent_comment_id: string | null }>(
-      `select parent_comment_id from comments where id = $1 and post_id = $2`,
+    const parent = await pool.query<{
+      parent_comment_id: string | null;
+      user_id: string;
+    }>(
+      `select parent_comment_id, user_id from comments where id = $1 and post_id = $2`,
       [parentCommentId, postId]
     );
     if (!parent.rows[0]) {
@@ -122,6 +126,7 @@ export async function createComment({
     if (parent.rows[0].parent_comment_id) {
       throw new Error("NESTED_REPLY_NOT_ALLOWED");
     }
+    parentAuthorId = parent.rows[0].user_id;
   }
 
   const client = await pool.connect();
@@ -133,12 +138,39 @@ export async function createComment({
        returning id`,
       [postId, userId, parentCommentId ?? null, content]
     );
+    const commentId = rows[0].id;
+
     await client.query(
       `update posts set comment_count = comment_count + 1 where id = $1`,
       [postId]
     );
+
+    // 답글이면 원 댓글 작성자에게, 최상위 댓글이면 게시글 작성자에게 알림
+    // (자기 글/댓글에 스스로 단 경우는 알림을 보내지 않음)
+    let recipientId: string | null = null;
+    let notificationType: "comment" | "reply" | null = null;
+    if (parentCommentId) {
+      recipientId = parentAuthorId;
+      notificationType = "reply";
+    } else {
+      const postRow = await client.query<{ user_id: string }>(
+        `select user_id from posts where id = $1`,
+        [postId]
+      );
+      recipientId = postRow.rows[0]?.user_id ?? null;
+      notificationType = "comment";
+    }
+
+    if (recipientId && recipientId !== userId) {
+      await client.query(
+        `insert into notifications (id, user_id, type, post_id, comment_id)
+         values (gen_random_uuid(), $1, $2, $3, $4)`,
+        [recipientId, notificationType, postId, commentId]
+      );
+    }
+
     await client.query("commit");
-    return { id: rows[0].id };
+    return { id: commentId };
   } catch (err) {
     await client.query("rollback");
     throw err;
