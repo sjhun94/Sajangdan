@@ -77,9 +77,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
       let existing = rows[0];
       if (!existing) {
+        // 동네/업종/현재-예비사장님 여부를 아직 안 골랐으니 onboarding_completed=false로
+        // 시작 — /onboarding 페이지가 이 값을 보고 프로필 입력을 유도함
         const inserted = await pool.query<UserRow>(
-          `insert into users (id, email, oauth_provider, owner_status)
-           values ($1, $2, $3, 'prospective')
+          `insert into users (id, email, oauth_provider, owner_status, onboarding_completed)
+           values ($1, $2, $3, 'prospective', false)
            returning id, email, password_hash, role, owner_status, business_verification_status`,
           [randomUUID(), user.email, account?.provider ?? null]
         );

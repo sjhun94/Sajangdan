@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { Building2, Sparkles } from "lucide-react";
 import { SignupForm } from "@/components/auth/signup-form";
+import { SnsLoginButtons } from "@/components/auth/sns-login-buttons";
+import { getEnabledSnsProviders } from "@/lib/snsProviders";
 
 export default async function SignupPage({
   searchParams,
@@ -8,6 +10,7 @@ export default async function SignupPage({
   searchParams: Promise<{ type?: string }>;
 }) {
   const { type } = await searchParams;
+  const snsProviders = getEnabledSnsProviders();
 
   if (type === "owner" || type === "prospective") {
     const ownerStatus = type === "owner" ? "current" : "prospective";
@@ -39,6 +42,16 @@ export default async function SignupPage({
           맞는 쪽을 골라주시면 딱 맞는 이야기를 보여드릴게요.
         </p>
       </div>
+      {snsProviders.length > 0 && (
+        <div className="flex w-full max-w-sm flex-col gap-2">
+          <SnsLoginButtons providers={snsProviders} />
+          <div className="flex w-full items-center gap-3 text-xs text-foreground/40">
+            <span className="h-px flex-1 bg-foreground/10" />
+            또는 이메일로 가입
+            <span className="h-px flex-1 bg-foreground/10" />
+          </div>
+        </div>
+      )}
       <div className="grid w-full grid-cols-1 gap-4 sm:grid-cols-2">
         <Link
           href="/signup?type=owner"

@@ -29,6 +29,10 @@ alter table users add column if not exists industry_slug text;
 alter table users add column if not exists revenue_verification_status text not null default 'none';
 alter table users add column if not exists revenue_tier text;
 alter table users add column if not exists years_in_business int;
+-- 간편로그인으로 새로 가입한 사용자는 동네/업종/현재-예비사장님 여부를
+-- 아직 입력하지 않은 상태이므로 false로 시작해서 /onboarding으로 보냄.
+-- 기존 계정(이메일가입 등)은 이미 가입 시 다 입력했으므로 true가 기본값.
+alter table users add column if not exists onboarding_completed boolean not null default true;
 
 create index if not exists idx_users_email on users (email);
 
