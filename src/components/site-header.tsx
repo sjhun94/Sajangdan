@@ -16,13 +16,27 @@ export async function SiteHeader() {
         >
           게시판
         </Link>
+        <Link
+          href="/hot"
+          className="rounded-full px-4 py-2 text-foreground/70 transition-colors hover:text-foreground"
+        >
+          인기글
+        </Link>
         {session?.user ? (
-          <Link
-            href="/me"
-            className="rounded-full px-4 py-2 text-foreground/70 transition-colors hover:text-foreground"
-          >
-            내 정보
-          </Link>
+          <>
+            <Link
+              href="/bookmarks"
+              className="rounded-full px-4 py-2 text-foreground/70 transition-colors hover:text-foreground"
+            >
+              스크랩
+            </Link>
+            <Link
+              href="/me"
+              className="rounded-full px-4 py-2 text-foreground/70 transition-colors hover:text-foreground"
+            >
+              내 정보
+            </Link>
+          </>
         ) : (
           <>
             <Link

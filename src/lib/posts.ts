@@ -18,9 +18,10 @@ export type PostDetail = PostSummary & {
   board_id: string;
   user_id: string; // 내부용(글쓴이 식별). 클라이언트 응답에는 절대 그대로 내려주지 않음
   liked_by_me: boolean;
+  bookmarked_by_me: boolean;
 };
 
-type RawPostRow = {
+export type RawPostRow = {
   id: string;
   title: string;
   content: string;
@@ -38,7 +39,7 @@ type RawPostRow = {
   author_years_in_business: number | null;
 };
 
-function toSummary(row: RawPostRow): PostSummary {
+export function toSummary(row: RawPostRow): PostSummary {
   const {
     author_region,
     author_industry_slug,
@@ -61,7 +62,7 @@ function toSummary(row: RawPostRow): PostSummary {
   };
 }
 
-const SELECT_POST_WITH_AUTHOR = `
+export const SELECT_POST_WITH_AUTHOR = `
   p.id, p.title, p.content, p.like_count, p.comment_count, p.view_count, p.industry_slug, p.topic_slug, p.created_at,
   u.region as author_region, u.industry_slug as author_industry_slug,
   u.owner_status as author_owner_status,
@@ -198,18 +199,78 @@ export async function searchAllPosts({
   };
 }
 
+export type HotPostPeriod = "today" | "week" | "all";
+
+export async function listHotPosts({
+  period = "week",
+  page = 1,
+  pageSize = 20,
+}: {
+  period?: HotPostPeriod;
+  page?: number;
+  pageSize?: number;
+}): Promise<{ results: PostSearchResult[]; total: number }> {
+  const offset = (page - 1) * pageSize;
+
+  let dateWhere = "";
+  if (period === "today") {
+    dateWhere = "and p.created_at >= now() - interval '1 day'";
+  } else if (period === "week") {
+    dateWhere = "and p.created_at >= now() - interval '7 days'";
+  }
+
+  const { rows: countRows } = await pool.query<{ count: string }>(
+    `select count(*) from posts p where p.deleted_at is null ${dateWhere}`
+  );
+
+  const { rows } = await pool.query<
+    RawPostRow & { board_slug: string; board_name: string }
+  >(
+    `select
+       ${SELECT_POST_WITH_AUTHOR},
+       b.slug as board_slug, b.name as board_name
+     from posts p
+     join boards b on b.id = p.board_id
+     join users u on u.id = p.user_id
+     where p.deleted_at is null ${dateWhere}
+     order by (p.like_count * 2 + p.comment_count) desc, p.created_at desc
+     limit $1 offset $2`,
+    [pageSize, offset]
+  );
+
+  return {
+    results: rows.map((row) => ({
+      ...toSummary(row),
+      board_slug: row.board_slug,
+      board_name: row.board_name,
+    })),
+    total: Number(countRows[0].count),
+  };
+}
+
 export async function getPostById(
   id: string,
   currentUserId?: string
 ): Promise<PostDetail | null> {
-  const { rows } = await pool.query<RawPostRow & { board_id: string; user_id: string; liked_by_me: boolean }>(
+  const { rows } = await pool.query<
+    RawPostRow & {
+      board_id: string;
+      user_id: string;
+      liked_by_me: boolean;
+      bookmarked_by_me: boolean;
+    }
+  >(
     `select
        ${SELECT_POST_WITH_AUTHOR},
        p.board_id, p.user_id,
        exists(
          select 1 from post_likes pl
          where pl.post_id = p.id and pl.user_id = $2
-       ) as liked_by_me
+       ) as liked_by_me,
+       exists(
+         select 1 from post_bookmarks pb
+         where pb.post_id = p.id and pb.user_id = $2
+       ) as bookmarked_by_me
      from posts p
      join users u on u.id = p.user_id
      where p.id = $1 and p.deleted_at is null`,
@@ -223,6 +284,7 @@ export async function getPostById(
     board_id: row.board_id,
     user_id: row.user_id,
     liked_by_me: row.liked_by_me,
+    bookmarked_by_me: row.bookmarked_by_me,
   };
 }
 

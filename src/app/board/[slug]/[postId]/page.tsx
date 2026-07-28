@@ -7,6 +7,7 @@ import { getTopicName } from "@/lib/topics";
 import { listComments } from "@/lib/comments";
 import { getPollForPost } from "@/lib/polls";
 import { LikeButton } from "@/components/board/like-button";
+import { BookmarkButton } from "@/components/board/bookmark-button";
 import { CommentSection } from "@/components/board/comment-section";
 import { PollDisplay } from "@/components/board/poll-display";
 
@@ -54,6 +55,10 @@ export default async function PostDetailPage({
             targetId={post.id}
             initialLiked={post.liked_by_me}
             initialCount={post.like_count}
+          />
+          <BookmarkButton
+            postId={post.id}
+            initialBookmarked={post.bookmarked_by_me}
           />
           <span className="text-xs text-foreground/50">
             조회 {post.view_count} · 댓글 {post.comment_count}

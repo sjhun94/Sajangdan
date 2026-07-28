@@ -168,6 +168,29 @@ create table if not exists poll_votes (
 
 create index if not exists idx_poll_votes_post on poll_votes (post_id);
 
+create table if not exists post_bookmarks (
+  id uuid primary key default gen_random_uuid(),
+  post_id uuid not null references posts(id),
+  user_id uuid not null references users(id),
+  created_at timestamptz not null default now(),
+  unique (post_id, user_id)
+);
+
+create index if not exists idx_post_bookmarks_user on post_bookmarks (user_id, created_at desc);
+
+create table if not exists notifications (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references users(id), -- 알림 받는 사람
+  type text not null check (type in ('comment', 'reply')),
+  post_id uuid not null references posts(id),
+  comment_id uuid references comments(id),
+  is_read boolean not null default false,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists idx_notifications_user on notifications (user_id, created_at desc);
+create index if not exists idx_notifications_unread on notifications (user_id, is_read);
+
 insert into boards (slug, name, description, sort_order) values
   ('free', '익명게시판', '자유롭게 이야기 나누는 공간', 0),
   ('industry', '업종별 게시판', '같은 업종 사장님들끼리 나누는 이야기', 1),
