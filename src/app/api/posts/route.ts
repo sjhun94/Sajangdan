@@ -4,6 +4,7 @@ import { requireUser } from "@/lib/authz";
 import { getBoardBySlug } from "@/lib/boards";
 import { createPost, listPosts } from "@/lib/posts";
 import { createPollOptions } from "@/lib/polls";
+import { isRateLimited } from "@/lib/rateLimit";
 import { INDUSTRIES } from "@/lib/industries";
 import { TOPICS } from "@/lib/topics";
 
@@ -55,6 +56,19 @@ const createPostSchema = z.object({
 export async function POST(request: Request) {
   const { session, error } = await requireUser();
   if (error) return error;
+
+  const limited = await isRateLimited({
+    table: "posts",
+    userId: session!.user.id,
+    windowMinutes: 10,
+    maxCount: 5,
+  });
+  if (limited) {
+    return NextResponse.json(
+      { error: "글을 너무 자주 올리고 있어요. 잠시 후 다시 시도해주세요." },
+      { status: 429 }
+    );
+  }
 
   const body = await request.json();
   const parsed = createPostSchema.safeParse(body);

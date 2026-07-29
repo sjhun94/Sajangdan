@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireUser } from "@/lib/authz";
 import { createReport } from "@/lib/reports";
+import { isRateLimited } from "@/lib/rateLimit";
 
 const reportSchema = z.object({
   reason: z.enum(["spam", "abuse", "fraud", "other"]),
@@ -14,6 +15,19 @@ export async function POST(
 ) {
   const { session, error } = await requireUser();
   if (error) return error;
+
+  const limited = await isRateLimited({
+    table: "reports",
+    userId: session!.user.id,
+    windowMinutes: 60,
+    maxCount: 20,
+  });
+  if (limited) {
+    return NextResponse.json(
+      { error: "신고를 너무 자주 접수하고 있어요. 잠시 후 다시 시도해주세요." },
+      { status: 429 }
+    );
+  }
 
   const { id: postId } = await params;
   const body = await request.json();
