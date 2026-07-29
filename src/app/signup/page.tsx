@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { SnsLoginButtons } from "@/components/auth/sns-login-buttons";
 import { getEnabledSnsProviders } from "@/lib/snsProviders";
 
@@ -15,6 +16,17 @@ export default function SignupPage() {
         </p>
       </div>
       <SnsLoginButtons providers={snsProviders} />
+      <p className="text-center text-xs text-foreground/40">
+        가입을 진행하면{" "}
+        <Link href="/terms" className="underline hover:text-foreground/70">
+          이용약관
+        </Link>{" "}
+        및{" "}
+        <Link href="/privacy" className="underline hover:text-foreground/70">
+          개인정보처리방침
+        </Link>
+        에 동의하는 것으로 간주돼요.
+      </p>
     </div>
   );
 }

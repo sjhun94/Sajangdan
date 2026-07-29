@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Noto_Sans_KR } from "next/font/google";
 import { AppSessionProvider } from "@/components/providers/session-provider";
 import { SiteHeader } from "@/components/site-header";
+import { SiteFooter } from "@/components/site-footer";
 import "./globals.css";
 
 const notoSansKr = Noto_Sans_KR({
@@ -27,6 +28,7 @@ export default function RootLayout({
         <AppSessionProvider>
           <SiteHeader />
           {children}
+          <SiteFooter />
         </AppSessionProvider>
       </body>
     </html>

@@ -83,10 +83,6 @@ export default async function Home() {
           ))}
         </section>
       </main>
-
-      <footer className="mx-auto w-full max-w-5xl px-6 py-8 text-xs text-foreground/50">
-        © 2026 사장단. 모든 이야기는 익명으로 보호됩니다.
-      </footer>
     </div>
   );
 }
