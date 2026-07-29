@@ -33,6 +33,10 @@ alter table users add column if not exists years_in_business int;
 -- 아직 입력하지 않은 상태이므로 false로 시작해서 /onboarding으로 보냄.
 -- 기존 계정(이메일가입 등)은 이미 가입 시 다 입력했으므로 true가 기본값.
 alter table users add column if not exists onboarding_completed boolean not null default true;
+-- 회원 탈퇴 시각. null이 아니면 탈퇴한 계정 (email/password_hash/oauth_provider/
+-- region/industry_slug는 탈퇴 처리 시 비워지고, 이 계정이 남긴 글/댓글은 지우지
+-- 않고 작성자 표시만 "(알 수 없음)"으로 바뀜)
+alter table users add column if not exists deleted_at timestamptz;
 
 create index if not exists idx_users_email on users (email);
 

@@ -37,6 +37,7 @@ export type RawPostRow = {
   author_revenue_verification_status: string;
   author_revenue_tier: string | null;
   author_years_in_business: number | null;
+  author_deleted_at: string | null;
 };
 
 export function toSummary(row: RawPostRow): PostSummary {
@@ -47,18 +48,21 @@ export function toSummary(row: RawPostRow): PostSummary {
     author_revenue_verification_status,
     author_revenue_tier,
     author_years_in_business,
+    author_deleted_at,
     ...rest
   } = row;
   return {
     ...rest,
-    author_label: formatOwnerLabel({
-      region: author_region,
-      industry_slug: author_industry_slug,
-      owner_status: author_owner_status,
-      revenue_verification_status: author_revenue_verification_status,
-      revenue_tier: author_revenue_tier,
-      years_in_business: author_years_in_business,
-    }),
+    author_label: author_deleted_at
+      ? "(알 수 없음)"
+      : formatOwnerLabel({
+          region: author_region,
+          industry_slug: author_industry_slug,
+          owner_status: author_owner_status,
+          revenue_verification_status: author_revenue_verification_status,
+          revenue_tier: author_revenue_tier,
+          years_in_business: author_years_in_business,
+        }),
   };
 }
 
@@ -68,7 +72,8 @@ export const SELECT_POST_WITH_AUTHOR = `
   u.owner_status as author_owner_status,
   u.revenue_verification_status as author_revenue_verification_status,
   u.revenue_tier as author_revenue_tier,
-  u.years_in_business as author_years_in_business
+  u.years_in_business as author_years_in_business,
+  u.deleted_at as author_deleted_at
 `;
 
 export async function listPosts({

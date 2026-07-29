@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { SignOutButton } from "@/components/auth/sign-out-button";
+import { WithdrawButton } from "@/components/auth/withdraw-button";
 import { getCurrentVerificationStatus } from "@/lib/verifications";
 import { getCurrentRevenueVerificationStatus } from "@/lib/revenueVerifications";
 import { getRevenueTierLabel } from "@/lib/revenue";
@@ -137,6 +138,7 @@ export default async function MePage() {
       <Link href="/" className="text-center text-sm text-foreground/50">
         홈으로 돌아가기
       </Link>
+      <WithdrawButton />
     </div>
   );
 }

@@ -26,6 +26,7 @@ type CommentRow = {
   revenue_verification_status: string;
   revenue_tier: string | null;
   years_in_business: number | null;
+  deleted_at: string | null;
 };
 
 export async function listComments(
@@ -41,7 +42,8 @@ export async function listComments(
          where cl.comment_id = c.id and cl.user_id = $2
        ) as liked_by_me,
        u.region, u.industry_slug, u.owner_status,
-       u.revenue_verification_status, u.revenue_tier, u.years_in_business
+       u.revenue_verification_status, u.revenue_tier, u.years_in_business,
+       u.deleted_at
      from comments c
      join users u on u.id = c.user_id
      where c.post_id = $1 and c.deleted_at is null
@@ -57,7 +59,7 @@ export async function listComments(
   const userOrderByLabel = new Map<string, string[]>();
   for (const row of rows) {
     if (baseLabelByUser.has(row.user_id)) continue;
-    const label = formatOwnerLabel(row);
+    const label = row.deleted_at ? "(알 수 없음)" : formatOwnerLabel(row);
     baseLabelByUser.set(row.user_id, label);
     const order = userOrderByLabel.get(label) ?? [];
     order.push(row.user_id);
