@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { listMyBookmarks } from "@/lib/bookmarks";
+import { getBlockedUserIds } from "@/lib/blocks";
 import { getIndustryName } from "@/lib/industries";
 import { getTopicName } from "@/lib/topics";
 import { formatShortDate } from "@/lib/format";
@@ -18,8 +19,10 @@ export default async function BookmarksPage({
   const { page: pageParam } = await searchParams;
   const page = Math.max(1, Number(pageParam) || 1);
 
+  const excludeUserIds = await getBlockedUserIds(session.user.id);
   const { results, total } = await listMyBookmarks({
     userId: session.user.id,
+    excludeUserIds,
     page,
   });
   const totalPages = getTotalPages(total);

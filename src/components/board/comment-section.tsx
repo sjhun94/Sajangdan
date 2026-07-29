@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { LikeButton } from "@/components/board/like-button";
+import { ReportBlockMenu } from "@/components/board/report-block-menu";
 
 type CommentView = {
   id: string;
@@ -99,10 +100,12 @@ function CommentItem({
   postId,
   comment,
   isReply,
+  isLoggedIn,
 }: {
   postId: string;
   comment: CommentView;
   isReply?: boolean;
+  isLoggedIn: boolean;
 }) {
   const [replying, setReplying] = useState(false);
 
@@ -130,6 +133,9 @@ function CommentItem({
               답글달기
             </button>
           )}
+          {isLoggedIn && !comment.isMine && (
+            <ReportBlockMenu targetType="comment" targetId={comment.id} />
+          )}
         </div>
       </div>
 
@@ -152,6 +158,7 @@ function CommentItem({
               postId={postId}
               comment={reply}
               isReply
+              isLoggedIn={isLoggedIn}
             />
           ))}
         </div>
@@ -188,7 +195,12 @@ export function CommentSection({
 
       <div className="flex flex-col gap-5">
         {comments.map((comment) => (
-          <CommentItem key={comment.id} postId={postId} comment={comment} />
+          <CommentItem
+            key={comment.id}
+            postId={postId}
+            comment={comment}
+            isLoggedIn={isLoggedIn}
+          />
         ))}
       </div>
     </div>

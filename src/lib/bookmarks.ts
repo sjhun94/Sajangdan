@@ -43,10 +43,12 @@ export async function isBookmarked(
 
 export async function listMyBookmarks({
   userId,
+  excludeUserIds = [],
   page = 1,
   pageSize = 20,
 }: {
   userId: string;
+  excludeUserIds?: string[];
   page?: number;
   pageSize?: number;
 }): Promise<{ results: PostSearchResult[]; total: number }> {
@@ -55,8 +57,9 @@ export async function listMyBookmarks({
   const { rows: countRows } = await pool.query<{ count: string }>(
     `select count(*) from post_bookmarks pb
      join posts p on p.id = pb.post_id
-     where pb.user_id = $1 and p.deleted_at is null`,
-    [userId]
+     where pb.user_id = $1 and p.deleted_at is null
+       and p.user_id <> all($2::uuid[])`,
+    [userId, excludeUserIds]
   );
 
   const { rows } = await pool.query<
@@ -70,9 +73,10 @@ export async function listMyBookmarks({
      join boards b on b.id = p.board_id
      join users u on u.id = p.user_id
      where pb.user_id = $1 and p.deleted_at is null
+       and p.user_id <> all($2::uuid[])
      order by pb.created_at desc
-     limit $2 offset $3`,
-    [userId, pageSize, offset]
+     limit $3 offset $4`,
+    [userId, excludeUserIds, pageSize, offset]
   );
 
   return {

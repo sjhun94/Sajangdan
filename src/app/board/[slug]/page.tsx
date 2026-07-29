@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { auth } from "@/auth";
 import { getBoardBySlug } from "@/lib/boards";
 import { countPosts, listPosts } from "@/lib/posts";
+import { getBlockedUserIds } from "@/lib/blocks";
 import { getIndustryName } from "@/lib/industries";
 import { getTopicName } from "@/lib/topics";
 import { formatShortDate } from "@/lib/format";
@@ -34,9 +36,19 @@ export default async function BoardPage({
   const board = await getBoardBySlug(slug);
   if (!board) notFound();
 
+  const session = await auth();
+  const excludeUserIds = await getBlockedUserIds(session?.user?.id);
+
   const [posts, total] = await Promise.all([
-    listPosts({ boardId: board.id, query: q, industrySlug, topicSlug, page }),
-    countPosts({ boardId: board.id, query: q, industrySlug, topicSlug }),
+    listPosts({
+      boardId: board.id,
+      query: q,
+      industrySlug,
+      topicSlug,
+      excludeUserIds,
+      page,
+    }),
+    countPosts({ boardId: board.id, query: q, industrySlug, topicSlug, excludeUserIds }),
   ]);
   const totalPages = getTotalPages(total);
 

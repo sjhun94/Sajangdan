@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { auth } from "@/auth";
 import { getBoardBySlug } from "@/lib/boards";
 import { getPostById, incrementViewCount } from "@/lib/posts";
+import { getBlockedUserIds } from "@/lib/blocks";
 import { getIndustryName } from "@/lib/industries";
 import { getTopicName } from "@/lib/topics";
 import { listComments } from "@/lib/comments";
@@ -10,6 +11,7 @@ import { LikeButton } from "@/components/board/like-button";
 import { BookmarkButton } from "@/components/board/bookmark-button";
 import { CommentSection } from "@/components/board/comment-section";
 import { PollDisplay } from "@/components/board/poll-display";
+import { ReportBlockMenu } from "@/components/board/report-block-menu";
 
 export default async function PostDetailPage({
   params,
@@ -20,6 +22,7 @@ export default async function PostDetailPage({
 
   const session = await auth();
   const currentUserId = session?.user?.id;
+  const excludeUserIds = await getBlockedUserIds(currentUserId);
 
   const board = await getBoardBySlug(slug);
   if (!board) notFound();
@@ -27,9 +30,11 @@ export default async function PostDetailPage({
   await incrementViewCount(postId);
   const post = await getPostById(postId, currentUserId);
   if (!post || post.board_id !== board.id) notFound();
+  if (excludeUserIds.includes(post.user_id)) notFound();
 
-  const comments = await listComments(postId, currentUserId);
+  const comments = await listComments(postId, currentUserId, excludeUserIds);
   const poll = await getPollForPost(postId, currentUserId);
+  const canReportPost = !!currentUserId && post.user_id !== currentUserId;
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-8 px-6 py-16">
@@ -63,6 +68,9 @@ export default async function PostDetailPage({
           <span className="text-xs text-foreground/50">
             조회 {post.view_count} · 댓글 {post.comment_count}
           </span>
+          {canReportPost && (
+            <ReportBlockMenu targetType="post" targetId={post.id} />
+          )}
         </div>
       </div>
 

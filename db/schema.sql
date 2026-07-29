@@ -195,6 +195,32 @@ create table if not exists notifications (
 create index if not exists idx_notifications_user on notifications (user_id, created_at desc);
 create index if not exists idx_notifications_unread on notifications (user_id, is_read);
 
+create table if not exists reports (
+  id uuid primary key default gen_random_uuid(),
+  reporter_user_id uuid not null references users(id),
+  target_type text not null check (target_type in ('post', 'comment')),
+  post_id uuid not null references posts(id),
+  comment_id uuid references comments(id), -- target_type='comment'일 때만 값 있음
+  reason text not null check (reason in ('spam', 'abuse', 'fraud', 'other')),
+  detail text, -- reason='other'일 때 자유 서술
+  status text not null default 'pending' check (status in ('pending', 'resolved', 'dismissed')),
+  reviewer_admin_id uuid references users(id),
+  reviewed_at timestamptz,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists idx_reports_status on reports (status, created_at desc);
+
+create table if not exists blocked_users (
+  id uuid primary key default gen_random_uuid(),
+  blocker_user_id uuid not null references users(id), -- 차단한 사람
+  blocked_user_id uuid not null references users(id), -- 차단당한 사람
+  created_at timestamptz not null default now(),
+  unique (blocker_user_id, blocked_user_id)
+);
+
+create index if not exists idx_blocked_users_blocker on blocked_users (blocker_user_id);
+
 insert into boards (slug, name, description, sort_order) values
   ('free', '익명게시판', '자유롭게 이야기 나누는 공간', 0),
   ('industry', '업종별 게시판', '같은 업종 사장님들끼리 나누는 이야기', 1),

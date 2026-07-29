@@ -119,6 +119,20 @@ export default async function MePage() {
           관리자: 매출/연차 인증 심사
         </Link>
       )}
+      {role === "admin" && (
+        <Link
+          href="/admin/reports"
+          className="rounded-full border border-foreground/15 px-6 py-3 text-center text-sm font-semibold transition-colors hover:bg-foreground/5"
+        >
+          관리자: 신고 처리
+        </Link>
+      )}
+      <Link
+        href="/blocked"
+        className="rounded-full border border-foreground/15 px-6 py-3 text-center text-sm font-semibold transition-colors hover:bg-foreground/5"
+      >
+        차단한 사용자 관리
+      </Link>
       <SignOutButton />
       <Link href="/" className="text-center text-sm text-foreground/50">
         홈으로 돌아가기

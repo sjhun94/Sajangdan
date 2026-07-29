@@ -1,5 +1,7 @@
 import Link from "next/link";
+import { auth } from "@/auth";
 import { listHotPosts, type HotPostPeriod } from "@/lib/posts";
+import { getBlockedUserIds } from "@/lib/blocks";
 import { getIndustryName } from "@/lib/industries";
 import { getTopicName } from "@/lib/topics";
 import { formatShortDate } from "@/lib/format";
@@ -21,7 +23,10 @@ export default async function HotPostsPage({
     periodParam === "today" || periodParam === "all" ? periodParam : "week";
   const page = Math.max(1, Number(pageParam) || 1);
 
-  const { results, total } = await listHotPosts({ period, page });
+  const session = await auth();
+  const excludeUserIds = await getBlockedUserIds(session?.user?.id);
+
+  const { results, total } = await listHotPosts({ period, excludeUserIds, page });
   const totalPages = getTotalPages(total);
 
   return (

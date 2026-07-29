@@ -1,6 +1,8 @@
 import Link from "next/link";
+import { auth } from "@/auth";
 import { listBoards } from "@/lib/boards";
 import { listHotPosts } from "@/lib/posts";
+import { getBlockedUserIds } from "@/lib/blocks";
 import { getIndustryName } from "@/lib/industries";
 import { getTopicName } from "@/lib/topics";
 import { formatShortDate } from "@/lib/format";
@@ -8,9 +10,17 @@ import { formatShortDate } from "@/lib/format";
 const HOT_PREVIEW_COUNT = 5;
 
 export default async function BoardListPage() {
+  const session = await auth();
+  const excludeUserIds = await getBlockedUserIds(session?.user?.id);
+
   const [boards, { results: hotPosts }] = await Promise.all([
     listBoards(),
-    listHotPosts({ period: "week", page: 1, pageSize: HOT_PREVIEW_COUNT }),
+    listHotPosts({
+      period: "week",
+      excludeUserIds,
+      page: 1,
+      pageSize: HOT_PREVIEW_COUNT,
+    }),
   ]);
 
   return (

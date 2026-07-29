@@ -30,9 +30,10 @@ type CommentRow = {
 
 export async function listComments(
   postId: string,
-  currentUserId?: string
+  currentUserId?: string,
+  excludeUserIds: string[] = []
 ): Promise<CommentView[]> {
-  const { rows } = await pool.query<CommentRow>(
+  const { rows: allRows } = await pool.query<CommentRow>(
     `select
        c.id, c.parent_comment_id, c.user_id, c.content, c.like_count, c.created_at,
        exists(
@@ -47,6 +48,8 @@ export async function listComments(
      order by c.created_at asc`,
     [postId, currentUserId ?? null]
   );
+  const excludeSet = new Set(excludeUserIds);
+  const rows = allRows.filter((row) => !excludeSet.has(row.user_id));
 
   // 같은 라벨(동네+업종+구분)을 쓰는 서로 다른 사람이 이 글 안에 있으면
   // 처음 등장한 순서대로 번호를 붙여 구분함 (예: "동작구 카페사장님 (2)")
@@ -177,6 +180,12 @@ export async function createComment({
   } finally {
     client.release();
   }
+}
+
+export async function softDeleteComment(commentId: string): Promise<void> {
+  await pool.query(`update comments set deleted_at = now() where id = $1`, [
+    commentId,
+  ]);
 }
 
 export async function toggleCommentLike(

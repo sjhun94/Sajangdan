@@ -1,5 +1,7 @@
 import Link from "next/link";
+import { auth } from "@/auth";
 import { searchAllPosts } from "@/lib/posts";
+import { getBlockedUserIds } from "@/lib/blocks";
 import { getIndustryName } from "@/lib/industries";
 import { getTopicName } from "@/lib/topics";
 import { formatShortDate } from "@/lib/format";
@@ -14,8 +16,11 @@ export default async function SearchPage({
   const page = Math.max(1, Number(pageParam) || 1);
   const query = q?.trim();
 
+  const session = await auth();
+  const excludeUserIds = await getBlockedUserIds(session?.user?.id);
+
   const { results, total } = query
-    ? await searchAllPosts({ query, page })
+    ? await searchAllPosts({ query, excludeUserIds, page })
     : { results: [], total: 0 };
   const totalPages = getTotalPages(total);
 

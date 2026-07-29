@@ -76,6 +76,7 @@ export async function listPosts({
   query,
   industrySlug,
   topicSlug,
+  excludeUserIds = [],
   page = 1,
   pageSize = 20,
 }: {
@@ -83,6 +84,7 @@ export async function listPosts({
   query?: string;
   industrySlug?: string;
   topicSlug?: string;
+  excludeUserIds?: string[];
   page?: number;
   pageSize?: number;
 }): Promise<PostSummary[]> {
@@ -102,6 +104,8 @@ export async function listPosts({
     params.push(topicSlug);
     where += ` and p.topic_slug = $${params.length}`;
   }
+  params.push(excludeUserIds);
+  where += ` and p.user_id <> all($${params.length}::uuid[])`;
 
   params.push(pageSize, offset);
 
@@ -122,11 +126,13 @@ export async function countPosts({
   query,
   industrySlug,
   topicSlug,
+  excludeUserIds = [],
 }: {
   boardId: string;
   query?: string;
   industrySlug?: string;
   topicSlug?: string;
+  excludeUserIds?: string[];
 }): Promise<number> {
   const params: unknown[] = [boardId];
   let where = "board_id = $1 and deleted_at is null";
@@ -143,6 +149,8 @@ export async function countPosts({
     params.push(topicSlug);
     where += ` and topic_slug = $${params.length}`;
   }
+  params.push(excludeUserIds);
+  where += ` and user_id <> all($${params.length}::uuid[])`;
 
   const { rows } = await pool.query<{ count: string }>(
     `select count(*) from posts where ${where}`,
@@ -158,10 +166,12 @@ export type PostSearchResult = PostSummary & {
 
 export async function searchAllPosts({
   query,
+  excludeUserIds = [],
   page = 1,
   pageSize = 20,
 }: {
   query: string;
+  excludeUserIds?: string[];
   page?: number;
   pageSize?: number;
 }): Promise<{ results: PostSearchResult[]; total: number }> {
@@ -170,8 +180,9 @@ export async function searchAllPosts({
 
   const { rows: countRows } = await pool.query<{ count: string }>(
     `select count(*) from posts
-     where deleted_at is null and (title ilike $1 or content ilike $1)`,
-    [like]
+     where deleted_at is null and (title ilike $1 or content ilike $1)
+       and user_id <> all($2::uuid[])`,
+    [like, excludeUserIds]
   );
 
   const { rows } = await pool.query<
@@ -184,9 +195,10 @@ export async function searchAllPosts({
      join boards b on b.id = p.board_id
      join users u on u.id = p.user_id
      where p.deleted_at is null and (p.title ilike $1 or p.content ilike $1)
+       and p.user_id <> all($2::uuid[])
      order by p.created_at desc
-     limit $2 offset $3`,
-    [like, pageSize, offset]
+     limit $3 offset $4`,
+    [like, excludeUserIds, pageSize, offset]
   );
 
   return {
@@ -203,10 +215,12 @@ export type HotPostPeriod = "today" | "week" | "all";
 
 export async function listHotPosts({
   period = "week",
+  excludeUserIds = [],
   page = 1,
   pageSize = 20,
 }: {
   period?: HotPostPeriod;
+  excludeUserIds?: string[];
   page?: number;
   pageSize?: number;
 }): Promise<{ results: PostSearchResult[]; total: number }> {
@@ -220,7 +234,9 @@ export async function listHotPosts({
   }
 
   const { rows: countRows } = await pool.query<{ count: string }>(
-    `select count(*) from posts p where p.deleted_at is null ${dateWhere}`
+    `select count(*) from posts p
+     where p.deleted_at is null and p.user_id <> all($1::uuid[]) ${dateWhere}`,
+    [excludeUserIds]
   );
 
   const { rows } = await pool.query<
@@ -232,10 +248,10 @@ export async function listHotPosts({
      from posts p
      join boards b on b.id = p.board_id
      join users u on u.id = p.user_id
-     where p.deleted_at is null ${dateWhere}
+     where p.deleted_at is null and p.user_id <> all($1::uuid[]) ${dateWhere}
      order by (p.like_count * 2 + p.comment_count) desc, p.created_at desc
-     limit $1 offset $2`,
-    [pageSize, offset]
+     limit $2 offset $3`,
+    [excludeUserIds, pageSize, offset]
   );
 
   return {
@@ -286,6 +302,12 @@ export async function getPostById(
     liked_by_me: row.liked_by_me,
     bookmarked_by_me: row.bookmarked_by_me,
   };
+}
+
+export async function softDeletePost(postId: string): Promise<void> {
+  await pool.query(`update posts set deleted_at = now() where id = $1`, [
+    postId,
+  ]);
 }
 
 export async function incrementViewCount(postId: string): Promise<void> {
