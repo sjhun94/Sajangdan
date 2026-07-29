@@ -225,6 +225,19 @@ create table if not exists blocked_users (
 
 create index if not exists idx_blocked_users_blocker on blocked_users (blocker_user_id);
 
+-- 안드로이드 앱: 외부 브라우저에서 끝낸 SNS 로그인을 앱 안 WebView 세션으로
+-- 넘겨주기 위한 1회용 단기 토큰 (2분 안에 안 쓰면 만료)
+create table if not exists auth_bridge_tokens (
+  id uuid primary key default gen_random_uuid(),
+  token text unique not null,
+  user_id uuid not null references users(id),
+  expires_at timestamptz not null,
+  used_at timestamptz,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists idx_auth_bridge_tokens_token on auth_bridge_tokens (token);
+
 insert into boards (slug, name, description, sort_order) values
   ('free', '익명게시판', '자유롭게 이야기 나누는 공간', 0),
   ('industry', '업종별 게시판', '같은 업종 사장님들끼리 나누는 이야기', 1),

@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { SnsLoginButtons } from "@/components/auth/sns-login-buttons";
 import { getEnabledSnsProviders } from "@/lib/snsProviders";
@@ -15,7 +16,9 @@ export default function SignupPage() {
           동네와 업종은 가입 직후에 바로 입력받아요.
         </p>
       </div>
-      <SnsLoginButtons providers={snsProviders} />
+      <Suspense>
+        <SnsLoginButtons providers={snsProviders} />
+      </Suspense>
       <p className="text-center text-xs text-foreground/40">
         가입을 진행하면{" "}
         <Link href="/terms" className="underline hover:text-foreground/70">

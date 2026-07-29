@@ -1,6 +1,9 @@
 "use client";
 
+import { useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
+import { Capacitor } from "@capacitor/core";
 import type { SnsProvider } from "@/lib/snsProviders";
 
 const PROVIDER_LABEL: Record<SnsProvider, string> = {
@@ -67,8 +70,44 @@ const PROVIDER_ICON: Record<SnsProvider, () => React.JSX.Element> = {
   naver: NaverIcon,
 };
 
+const BRIDGE_CALLBACK_URL = "/auth/bridge/start";
+
 export function SnsLoginButtons({ providers }: { providers: SnsProvider[] }) {
+  const searchParams = useSearchParams();
+  const nativeProvider = searchParams.get("native") === "1"
+    ? (searchParams.get("provider") as SnsProvider | null)
+    : null;
+
+  // 안드로이드 앱 안의 외부 브라우저로 이 페이지가 열렸을 때(native=1),
+  // 사용자가 다시 누를 필요 없이 바로 SNS 로그인을 시작함
+  useEffect(() => {
+    if (nativeProvider && providers.includes(nativeProvider)) {
+      signIn(nativeProvider, { callbackUrl: BRIDGE_CALLBACK_URL });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   if (providers.length === 0) return null;
+
+  async function handleClick(provider: SnsProvider) {
+    if (Capacitor.isNativePlatform()) {
+      // 앱 안 WebView에서는 카카오/구글/네이버 로그인이 정상 동작하지 않아서,
+      // 외부 브라우저로 로그인을 열고 끝나면 딥링크로 앱에 돌아오게 함
+      const { Browser } = await import("@capacitor/browser");
+      const url = new URL("https://worktalk-one.vercel.app/login");
+      url.searchParams.set("native", "1");
+      url.searchParams.set("provider", provider);
+      await Browser.open({ url: url.toString() });
+      return;
+    }
+    signIn(provider, { callbackUrl: "/onboarding" });
+  }
+
+  if (nativeProvider) {
+    return (
+      <p className="text-sm text-foreground/60">로그인 진행 중이에요...</p>
+    );
+  }
 
   return (
     <div className="flex w-full flex-col gap-2">
@@ -78,7 +117,7 @@ export function SnsLoginButtons({ providers }: { providers: SnsProvider[] }) {
           <button
             key={provider}
             type="button"
-            onClick={() => signIn(provider, { callbackUrl: "/onboarding" })}
+            onClick={() => handleClick(provider)}
             className={`flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition-opacity ${PROVIDER_STYLE[provider]}`}
           >
             <Icon />

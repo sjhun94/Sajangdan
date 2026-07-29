@@ -8,6 +8,7 @@ import Naver from "next-auth/providers/naver";
 import bcrypt from "bcryptjs";
 import { authConfig } from "@/auth.config";
 import { pool } from "@/lib/db";
+import { consumeBridgeToken } from "@/lib/authBridge";
 
 type UserRow = {
   id: string;
@@ -23,8 +24,33 @@ const providers: Provider[] = [
     credentials: {
       email: { label: "이메일", type: "email" },
       password: { label: "비밀번호", type: "password" },
+      bridgeToken: { label: "bridgeToken", type: "text" },
     },
     async authorize(credentials) {
+      const bridgeToken = credentials?.bridgeToken;
+      if (typeof bridgeToken === "string" && bridgeToken) {
+        // 안드로이드 앱: 외부 브라우저에서 SNS 로그인을 마친 뒤, 앱 WebView
+        // 세션으로 넘겨받을 때 쓰는 경로 (이메일/비밀번호 없이 토큰만으로 인증)
+        const userId = await consumeBridgeToken(bridgeToken);
+        if (!userId) return null;
+
+        const { rows: bridgeRows } = await pool.query<UserRow>(
+          `select id, email, password_hash, role, owner_status, business_verification_status
+           from users where id = $1`,
+          [userId]
+        );
+        const bridgeUser = bridgeRows[0];
+        if (!bridgeUser) return null;
+
+        return {
+          id: bridgeUser.id,
+          email: bridgeUser.email,
+          role: bridgeUser.role,
+          ownerStatus: bridgeUser.owner_status,
+          businessVerificationStatus: bridgeUser.business_verification_status,
+        };
+      }
+
       const email = credentials?.email;
       const password = credentials?.password;
       if (typeof email !== "string" || typeof password !== "string") {
