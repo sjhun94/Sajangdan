@@ -95,6 +95,19 @@ export default async function BoardListPage() {
         <span className="text-sm font-medium text-accent">보기</span>
       </Link>
 
+      <Link
+        href="/stats"
+        className="flex items-center justify-between rounded-2xl border border-foreground/10 p-5 transition-colors hover:border-accent"
+      >
+        <div>
+          <div className="font-bold">📊 업종별 사장님 현황</div>
+          <div className="text-sm text-foreground/60">
+            우리 업종 사장님들은 매출이 어느 정도일까?
+          </div>
+        </div>
+        <span className="text-sm font-medium text-accent">보기</span>
+      </Link>
+
       <div className="flex flex-col gap-2">
         {boards.map((board) => (
           <Link
