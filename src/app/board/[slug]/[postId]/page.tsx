@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { auth } from "@/auth";
 import { getBoardBySlug } from "@/lib/boards";
@@ -9,9 +10,33 @@ import { listComments } from "@/lib/comments";
 import { getPollForPost } from "@/lib/polls";
 import { LikeButton } from "@/components/board/like-button";
 import { BookmarkButton } from "@/components/board/bookmark-button";
+import { ShareButton } from "@/components/board/share-button";
 import { CommentSection } from "@/components/board/comment-section";
 import { PollDisplay } from "@/components/board/poll-display";
 import { ReportBlockMenu } from "@/components/board/report-block-menu";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string; postId: string }>;
+}): Promise<Metadata> {
+  const { slug, postId } = await params;
+  const [board, post] = await Promise.all([
+    getBoardBySlug(slug),
+    getPostById(postId),
+  ]);
+  if (!board || !post || post.board_id !== board.id) return {};
+
+  const title = `${post.title} | 사장단 ${board.name}`;
+  const description =
+    post.content.replace(/\s+/g, " ").trim().slice(0, 100) ||
+    "사장님들이 익명으로 나누는 이야기";
+  return {
+    title,
+    description,
+    openGraph: { title, description, type: "article" },
+  };
+}
 
 export default async function PostDetailPage({
   params,
@@ -65,6 +90,7 @@ export default async function PostDetailPage({
             postId={post.id}
             initialBookmarked={post.bookmarked_by_me}
           />
+          <ShareButton title={post.title} />
           <span className="text-xs text-foreground/50">
             조회 {post.view_count} · 댓글 {post.comment_count}
           </span>
