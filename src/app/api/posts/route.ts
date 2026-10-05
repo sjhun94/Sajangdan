@@ -5,6 +5,11 @@ import { getBoardBySlug } from "@/lib/boards";
 import { createPost, listPosts } from "@/lib/posts";
 import { createPollOptions } from "@/lib/polls";
 import { isRateLimited } from "@/lib/rateLimit";
+import {
+  findSpamReason,
+  isDuplicateRecent,
+  maskProfanity,
+} from "@/lib/contentFilter";
 import { INDUSTRIES } from "@/lib/industries";
 import { TOPICS } from "@/lib/topics";
 
@@ -108,17 +113,40 @@ export async function POST(request: Request) {
     }
   }
 
+  const pollOptions = parsed.data.pollOptions?.map(maskProfanity);
+  const spamReason = findSpamReason(
+    [parsed.data.title, parsed.data.content, ...(pollOptions ?? [])].join("\n")
+  );
+  if (spamReason) {
+    return NextResponse.json({ error: spamReason }, { status: 400 });
+  }
+
+  const title = maskProfanity(parsed.data.title);
+  const content = maskProfanity(parsed.data.content);
+  if (
+    await isDuplicateRecent({
+      table: "posts",
+      userId: session!.user.id,
+      content,
+    })
+  ) {
+    return NextResponse.json(
+      { error: "방금 올린 글과 같은 내용이에요." },
+      { status: 400 }
+    );
+  }
+
   const id = await createPost({
     boardId: board.id,
     userId: session!.user.id,
-    title: parsed.data.title,
-    content: parsed.data.content,
+    title,
+    content,
     industrySlug: parsed.data.industrySlug,
     topicSlug: parsed.data.topicSlug,
   });
 
-  if (board.slug === "poll" && parsed.data.pollOptions) {
-    await createPollOptions(id, parsed.data.pollOptions);
+  if (board.slug === "poll" && pollOptions) {
+    await createPollOptions(id, pollOptions);
   }
 
   return NextResponse.json({ id });

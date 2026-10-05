@@ -4,6 +4,11 @@ import { requireUser } from "@/lib/authz";
 import { pool } from "@/lib/db";
 import { createComment } from "@/lib/comments";
 import { isRateLimited } from "@/lib/rateLimit";
+import {
+  findSpamReason,
+  isDuplicateRecent,
+  maskProfanity,
+} from "@/lib/contentFilter";
 
 const createCommentSchema = z.object({
   content: z.string().min(1).max(2000),
@@ -51,11 +56,29 @@ export async function POST(
     );
   }
 
+  const spamReason = findSpamReason(parsed.data.content);
+  if (spamReason) {
+    return NextResponse.json({ error: spamReason }, { status: 400 });
+  }
+  const content = maskProfanity(parsed.data.content);
+  if (
+    await isDuplicateRecent({
+      table: "comments",
+      userId: session!.user.id,
+      content,
+    })
+  ) {
+    return NextResponse.json(
+      { error: "방금 남긴 댓글과 같은 내용이에요." },
+      { status: 400 }
+    );
+  }
+
   try {
     const comment = await createComment({
       postId,
       userId: session!.user.id,
-      content: parsed.data.content,
+      content,
       parentCommentId: parsed.data.parentCommentId,
     });
     return NextResponse.json(comment);
