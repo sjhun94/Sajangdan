@@ -1,8 +1,9 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { z } from "zod";
 import { requireUser } from "@/lib/authz";
 import { pool } from "@/lib/db";
 import { createComment } from "@/lib/comments";
+import { sendPushToUser } from "@/lib/push";
 import { isRateLimited } from "@/lib/rateLimit";
 import {
   findSpamReason,
@@ -45,8 +46,9 @@ export async function POST(
     );
   }
 
-  const post = await pool.query<{ id: string }>(
-    `select id from posts where id = $1 and deleted_at is null`,
+  const post = await pool.query<{ id: string; board_slug: string }>(
+    `select p.id, b.slug as board_slug from posts p join boards b on b.id = p.board_id
+     where p.id = $1 and p.deleted_at is null`,
     [postId]
   );
   if (!post.rows[0]) {
@@ -75,13 +77,27 @@ export async function POST(
   }
 
   try {
-    const comment = await createComment({
+    const { id, notified } = await createComment({
       postId,
       userId: session!.user.id,
       content,
       parentCommentId: parsed.data.parentCommentId,
     });
-    return NextResponse.json(comment);
+
+    // 응답을 먼저 보내고, 알림 받을 사람의 기기로 푸시는 그 뒤에 보낸다
+    if (notified) {
+      after(() =>
+        sendPushToUser(notified.recipientId, {
+          title:
+            notified.type === "reply"
+              ? "내 댓글에 답글이 달렸어요"
+              : "내 글에 새 댓글이 달렸어요",
+          body: content.length > 60 ? `${content.slice(0, 60)}…` : content,
+          url: `/board/${post.rows[0].board_slug}/${postId}`,
+        })
+      );
+    }
+    return NextResponse.json({ id });
   } catch (err) {
     if (err instanceof Error && err.message === "NESTED_REPLY_NOT_ALLOWED") {
       return NextResponse.json(

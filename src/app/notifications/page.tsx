@@ -4,6 +4,7 @@ import { auth } from "@/auth";
 import { listNotifications, markAllAsRead } from "@/lib/notifications";
 import { formatShortDate } from "@/lib/format";
 import { Pagination, getTotalPages } from "@/components/board/pagination";
+import { PushToggle } from "@/components/board/push-toggle";
 
 export default async function NotificationsPage({
   searchParams,
@@ -28,6 +29,7 @@ export default async function NotificationsPage({
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-4 px-6 py-16">
       <h1 className="text-2xl font-black">알림</h1>
+      <PushToggle />
 
       <div className="flex flex-col divide-y divide-foreground/10">
         {results.length === 0 && (

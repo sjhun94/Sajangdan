@@ -115,7 +115,11 @@ export async function createComment({
   userId: string;
   content: string;
   parentCommentId?: string | null;
-}): Promise<{ id: string }> {
+}): Promise<{
+  id: string;
+  // 알림을 받은 사람 (서버 내부용 - API 응답으로 절대 내보내지 않음)
+  notified: { recipientId: string; type: "comment" | "reply" } | null;
+}> {
   let parentAuthorId: string | null = null;
   if (parentCommentId) {
     const parent = await pool.query<{
@@ -175,7 +179,11 @@ export async function createComment({
     }
 
     await client.query("commit");
-    return { id: commentId };
+    const notified =
+      recipientId && recipientId !== userId && notificationType
+        ? { recipientId, type: notificationType }
+        : null;
+    return { id: commentId, notified };
   } catch (err) {
     await client.query("rollback");
     throw err;

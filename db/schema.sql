@@ -225,6 +225,18 @@ create table if not exists blocked_users (
 
 create index if not exists idx_blocked_users_blocker on blocked_users (blocker_user_id);
 
+-- 웹 푸시 구독 (브라우저/기기마다 하나씩, 한 사람이 여러 개 가질 수 있음)
+create table if not exists push_subscriptions (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references users(id),
+  endpoint text unique not null,
+  p256dh text not null,
+  auth text not null,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists idx_push_subscriptions_user on push_subscriptions (user_id);
+
 -- 기업마당(bizinfo.go.kr) 지원사업 공고. 매일 크론으로 가져와 쌓음 (external_id 기준 중복 제거)
 create table if not exists support_programs (
   id uuid primary key default gen_random_uuid(),
