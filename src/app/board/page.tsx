@@ -82,6 +82,19 @@ export default async function BoardListPage() {
         </div>
       )}
 
+      <Link
+        href="/support"
+        className="flex items-center justify-between rounded-2xl border border-accent/30 bg-accent/5 p-5 transition-colors hover:border-accent"
+      >
+        <div>
+          <div className="font-bold">📢 지원사업 공고</div>
+          <div className="text-sm text-foreground/60">
+            지금 신청할 수 있는 정부·지자체 지원사업을 매일 모아드려요
+          </div>
+        </div>
+        <span className="text-sm font-medium text-accent">보기</span>
+      </Link>
+
       <div className="flex flex-col gap-2">
         {boards.map((board) => (
           <Link

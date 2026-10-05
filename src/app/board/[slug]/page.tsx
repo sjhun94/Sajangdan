@@ -10,6 +10,8 @@ import { formatShortDate } from "@/lib/format";
 import { Pagination, getTotalPages } from "@/components/board/pagination";
 import { IndustryTabs } from "@/components/board/industry-tabs";
 import { TopicTabs } from "@/components/board/topic-tabs";
+import { SupportProgramList } from "@/components/board/support-program-list";
+import { listOpenSupportPrograms } from "@/lib/supportPrograms";
 
 export default async function BoardPage({
   params,
@@ -50,6 +52,11 @@ export default async function BoardPage({
     }),
     countPosts({ boardId: board.id, query: q, industrySlug, topicSlug, excludeUserIds }),
   ]);
+  // 알짜정보 게시판 첫 페이지에는 자동으로 모은 지원사업 공고를 먼저 보여준다
+  const supportPrograms =
+    slug === "info" && page === 1 && !q
+      ? (await listOpenSupportPrograms({ pageSize: 5 })).results
+      : [];
   const totalPages = getTotalPages(total);
 
   return (
@@ -68,6 +75,18 @@ export default async function BoardPage({
         <IndustryTabs slug={slug} active={industrySlug} q={q} />
       )}
       {isTopicBoard && <TopicTabs slug={slug} active={topicSlug} q={q} />}
+
+      {supportPrograms.length > 0 && (
+        <div className="flex flex-col gap-1 rounded-2xl border border-foreground/10 p-5">
+          <div className="flex items-center justify-between">
+            <h2 className="font-bold">📢 신청 가능한 지원사업</h2>
+            <Link href="/support" className="text-xs font-medium text-accent">
+              전체 보기
+            </Link>
+          </div>
+          <SupportProgramList programs={supportPrograms} />
+        </div>
+      )}
 
       <form className="flex gap-2">
         {activeFilter && (

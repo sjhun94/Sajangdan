@@ -225,6 +225,25 @@ create table if not exists blocked_users (
 
 create index if not exists idx_blocked_users_blocker on blocked_users (blocker_user_id);
 
+-- 기업마당(bizinfo.go.kr) 지원사업 공고. 매일 크론으로 가져와 쌓음 (external_id 기준 중복 제거)
+create table if not exists support_programs (
+  id uuid primary key default gen_random_uuid(),
+  external_id text unique not null,
+  title text not null,
+  agency text,          -- 소관기관
+  category text,        -- 지원분야 대분류 (금융, 경영, 창업 등)
+  summary text,         -- 사업개요 (HTML 태그 제거)
+  target text,          -- 지원대상
+  apply_period text,    -- 신청기간 원문 (예: 20261001 ~ 20261031)
+  url text not null,
+  registered_at text,   -- 기업마당 등록일 원문
+  created_at timestamptz not null default now()
+);
+
+create index if not exists idx_support_programs_created on support_programs (created_at desc);
+-- 신청 마감일 (apply_period에서 뽑아낸 값, 상시/미정이면 null) - 마감 지난 공고 숨기기용
+alter table support_programs add column if not exists apply_end date;
+
 -- 안드로이드 앱: 외부 브라우저에서 끝낸 SNS 로그인을 앱 안 WebView 세션으로
 -- 넘겨주기 위한 1회용 단기 토큰 (2분 안에 안 쓰면 만료)
 create table if not exists auth_bridge_tokens (
