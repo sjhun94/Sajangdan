@@ -120,14 +120,29 @@ export async function saveSupportPrograms(
 }
 
 // 마감이 지나지 않은(또는 마감일이 없는 상시) 공고만, 최근 등록순
+// 기업마당 지원대상 값(소상공인/중소기업/창업벤처/사회적기업 등)으로 두 묶음으로 나눈다.
+// 대상이 비어 있어도 제목에 소상공인·자영업이 들어가면 사장님 대상으로 본다.
+export type SupportProgramGroup = "small-biz" | "others";
+
+const SMALL_BIZ_CONDITION = `(coalesce(target, '') ~ '소상공인|자영업' or title ~ '소상공인|자영업')`;
+
+export const SUPPORT_GROUP_LABELS: Record<SupportProgramGroup, string> = {
+  "small-biz": "소상공인·자영업자",
+  others: "중소기업·사회적기업·기타",
+};
+
 export async function listOpenSupportPrograms({
+  group,
   page = 1,
   pageSize = 20,
 }: {
+  group?: SupportProgramGroup;
   page?: number;
   pageSize?: number;
 } = {}): Promise<{ results: SupportProgram[]; total: number }> {
-  const where = `apply_end is null or apply_end >= (now() at time zone 'Asia/Seoul')::date`;
+  let where = `(apply_end is null or apply_end >= (now() at time zone 'Asia/Seoul')::date)`;
+  if (group === "small-biz") where += ` and ${SMALL_BIZ_CONDITION}`;
+  if (group === "others") where += ` and not ${SMALL_BIZ_CONDITION}`;
   const { rows: countRows } = await pool.query<{ count: string }>(
     `select count(*) from support_programs where ${where}`
   );

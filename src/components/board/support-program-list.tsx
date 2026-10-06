@@ -19,6 +19,11 @@ export function SupportProgramList({
             <span className="rounded-full bg-accent/10 px-2 py-0.5 text-[11px] font-bold text-accent">
               {formatDeadline(p.applyEnd)}
             </span>
+            {p.target && (
+              <span className="rounded-full bg-foreground/5 px-2 py-0.5 text-[11px] font-medium text-foreground/60">
+                {p.target}
+              </span>
+            )}
             {p.category && (
               <span className="rounded-full bg-foreground/5 px-2 py-0.5 text-[11px] font-medium text-foreground/60">
                 {p.category}

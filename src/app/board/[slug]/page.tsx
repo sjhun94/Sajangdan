@@ -55,7 +55,7 @@ export default async function BoardPage({
   // 알짜정보 게시판 첫 페이지에는 자동으로 모은 지원사업 공고를 먼저 보여준다
   const supportPrograms =
     slug === "info" && page === 1 && !q
-      ? (await listOpenSupportPrograms({ pageSize: 5 })).results
+      ? (await listOpenSupportPrograms({ group: "small-biz", pageSize: 5 })).results
       : [];
   const totalPages = getTotalPages(total);
 
@@ -79,7 +79,7 @@ export default async function BoardPage({
       {supportPrograms.length > 0 && (
         <div className="flex flex-col gap-1 rounded-2xl border border-foreground/10 p-5">
           <div className="flex items-center justify-between">
-            <h2 className="font-bold">📢 신청 가능한 지원사업</h2>
+            <h2 className="font-bold">📢 사장님 대상 지원사업</h2>
             <Link href="/support" className="text-xs font-medium text-accent">
               전체 보기
             </Link>
