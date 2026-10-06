@@ -9,6 +9,7 @@ import { getTopicName } from "@/lib/topics";
 import { listComments } from "@/lib/comments";
 import { getPollForPost } from "@/lib/polls";
 import { listPostImageIds } from "@/lib/postImages";
+import { SITE_URL } from "@/lib/siteUrl";
 import { LikeButton } from "@/components/board/like-button";
 import { BookmarkButton } from "@/components/board/bookmark-button";
 import { ShareButton } from "@/components/board/share-button";
@@ -35,6 +36,7 @@ export async function generateMetadata({
   return {
     title,
     description,
+    alternates: { canonical: `/board/${board.slug}/${post.id}` },
     openGraph: { title, description, type: "article" },
   };
 }
@@ -61,10 +63,40 @@ export default async function PostDetailPage({
   const comments = await listComments(postId, currentUserId, excludeUserIds);
   const poll = await getPollForPost(postId, currentUserId);
   const imageIds = await listPostImageIds(postId);
+
+  // 검색엔진이 "커뮤니티 글"로 알아보도록 구조화 데이터를 넣는다 (화면에 보이는 정보만 사용)
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@type": "DiscussionForumPosting",
+    headline: post.title,
+    text: post.content.slice(0, 1000),
+    datePublished: new Date(post.created_at).toISOString(),
+    url: `${SITE_URL}/board/${board.slug}/${post.id}`,
+    author: { "@type": "Person", name: post.author_label },
+    image: imageIds.map((id) => `${SITE_URL}/api/post-images/${id}`),
+    interactionStatistic: [
+      {
+        "@type": "InteractionCounter",
+        interactionType: "https://schema.org/CommentAction",
+        userInteractionCount: post.comment_count,
+      },
+      {
+        "@type": "InteractionCounter",
+        interactionType: "https://schema.org/LikeAction",
+        userInteractionCount: post.like_count,
+      },
+    ],
+  };
   const canReportPost = !!currentUserId && post.user_id !== currentUserId;
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-8 px-6 py-16">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(structuredData).replace(/</g, "\\u003c"),
+        }}
+      />
       <div className="flex flex-col gap-3 border-b border-foreground/10 pb-6">
         <div className="flex items-center gap-2">
           <span className="text-xs font-semibold text-foreground/70">

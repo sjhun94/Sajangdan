@@ -3,11 +3,13 @@
 import { useEffect, useState } from "react";
 import {
   PUSH_PROMPT_EVENT,
+  getIosInstallHint,
   hasPushSubscription,
   isWebPushSupported,
   subscribePush,
   type PushPromptReason,
 } from "@/lib/webPushClient";
+import { IosInstallGuide } from "@/components/ios-install-guide";
 
 // "나중에"를 누르면 이 기간 동안은 다시 묻지 않는다
 const DISMISS_KEY = "sajangdan:push-prompt-dismissed-at";
@@ -32,13 +34,24 @@ export function PushPrompt() {
   const [reason, setReason] = useState<PushPromptReason | null>(null);
   const [result, setResult] = useState<"on" | "denied" | null>(null);
   const [busy, setBusy] = useState(false);
+  // 아이폰(홈 화면 미설치)이면 알림 켜기 대신 설치 방법을 보여준다
+  const [iosHint, setIosHint] = useState<"install" | "open-in-browser" | null>(
+    null
+  );
 
   useEffect(() => {
     async function onPrompt(e: Event) {
       const r = (e as CustomEvent<PushPromptReason>).detail;
+      if (dismissedRecently()) return;
+      const hint = getIosInstallHint();
+      if (hint) {
+        setResult(null);
+        setIosHint(hint);
+        setReason(r);
+        return;
+      }
       if (!isWebPushSupported()) return;
       if (Notification.permission === "denied") return;
-      if (dismissedRecently()) return;
       try {
         if (await hasPushSubscription()) return;
       } catch {
@@ -83,7 +96,26 @@ export function PushPrompt() {
   return (
     <div className="fixed inset-x-0 bottom-4 z-50 flex justify-center px-4">
       <div className="flex w-full max-w-md flex-col gap-3 rounded-2xl border border-foreground/10 bg-background p-4 shadow-lg">
-        {result ? (
+        {iosHint ? (
+          <>
+            <div className="flex flex-col gap-1.5">
+              <span className="text-sm font-semibold">🔔 {MESSAGES[reason]}</span>
+              <span className="text-xs text-foreground/50">
+                아이폰은 사장단을 홈 화면에 추가하면 알림을 받을 수 있어요.
+              </span>
+              <IosInstallGuide hint={iosHint} />
+            </div>
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={later}
+                className="rounded-full bg-accent px-4 py-1.5 text-xs font-semibold text-accent-foreground"
+              >
+                확인
+              </button>
+            </div>
+          </>
+        ) : result ? (
           <p className="text-sm font-semibold">
             {result === "on"
               ? "🔔 알림이 켜졌어요. 알림 페이지에서 언제든 끌 수 있어요."

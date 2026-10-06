@@ -2,18 +2,28 @@
 
 import { useEffect, useState } from "react";
 import {
+  getIosInstallHint,
   hasPushSubscription,
   isWebPushSupported,
   subscribePush,
 } from "@/lib/webPushClient";
+import { IosInstallGuide } from "@/components/ios-install-guide";
 
 type State = "loading" | "unsupported" | "denied" | "off" | "on";
+type IosHint = "install" | "open-in-browser";
 
 export function PushToggle() {
   const [state, setState] = useState<State>("loading");
   const [busy, setBusy] = useState(false);
+  const [iosHint, setIosHint] = useState<IosHint | null>(null);
 
   useEffect(() => {
+    // 아이폰에서 아직 홈 화면에 추가하지 않았으면 설치 방법을 안내
+    const hint = getIosInstallHint();
+    if (hint) {
+      setIosHint(hint);
+      return;
+    }
     // 안드로이드 앱(WebView)과 푸시 미지원 브라우저에서는 숨김
     if (!isWebPushSupported()) {
       setState("unsupported");
@@ -56,6 +66,15 @@ export function PushToggle() {
     } finally {
       setBusy(false);
     }
+  }
+
+  if (iosHint) {
+    return (
+      <div className="flex flex-col gap-2 rounded-2xl border border-foreground/10 p-4">
+        <span className="text-sm font-semibold">📱 아이폰에서 알림 받기</span>
+        <IosInstallGuide hint={iosHint} />
+      </div>
+    );
   }
 
   if (state === "loading" || state === "unsupported") return null;

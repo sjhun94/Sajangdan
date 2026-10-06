@@ -23,6 +23,27 @@ export function isWebPushSupported(): boolean {
   );
 }
 
+// 아이폰·아이패드는 "홈 화면에 추가"로 설치해서 열었을 때만 웹 알림을 받을 수 있다.
+// 설치 안내가 필요하면 어떤 안내인지 돌려준다.
+//  - "install": 사파리/크롬에서 열었음 → 공유 버튼 → 홈 화면에 추가
+//  - "open-in-browser": 카카오톡 등 앱 안 브라우저 → 사파리로 먼저 열어야 함
+export function getIosInstallHint(): "install" | "open-in-browser" | null {
+  if (Capacitor.isNativePlatform()) return null;
+  const ua = navigator.userAgent;
+  const isIos =
+    /iPhone|iPad|iPod/.test(ua) ||
+    (ua.includes("Macintosh") && navigator.maxTouchPoints > 1);
+  if (!isIos) return null;
+  const standalone =
+    window.matchMedia("(display-mode: standalone)").matches ||
+    (navigator as Navigator & { standalone?: boolean }).standalone === true;
+  if (standalone) return null;
+  if (/KAKAOTALK|NAVER|Instagram|FBAN|FBAV|Line\//i.test(ua)) {
+    return "open-in-browser";
+  }
+  return "install";
+}
+
 export async function hasPushSubscription(): Promise<boolean> {
   const reg = await navigator.serviceWorker.register("/sw.js");
   return !!(await reg.pushManager.getSubscription());
