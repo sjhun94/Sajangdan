@@ -106,6 +106,14 @@ export default async function MePage() {
         )}
       {role === "admin" && (
         <Link
+          href="/admin"
+          className="rounded-full border border-foreground/15 px-6 py-3 text-center text-sm font-semibold transition-colors hover:bg-foreground/5"
+        >
+          관리자: 운영 대시보드
+        </Link>
+      )}
+      {role === "admin" && (
+        <Link
           href="/admin/verifications"
           className="rounded-full border border-foreground/15 px-6 py-3 text-center text-sm font-semibold transition-colors hover:bg-foreground/5"
         >
