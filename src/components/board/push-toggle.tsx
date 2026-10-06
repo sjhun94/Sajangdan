@@ -101,15 +101,21 @@ export function PushToggle() {
       </div>
       {state !== "denied" && (
         <button
+          type="button"
+          role="switch"
+          aria-checked={state === "on"}
+          aria-label="이 기기로 알림 받기"
           onClick={state === "on" ? turnOff : turnOn}
           disabled={busy}
-          className={`shrink-0 rounded-full px-4 py-1.5 text-xs font-semibold transition-opacity disabled:opacity-50 ${
-            state === "on"
-              ? "border border-foreground/15 text-foreground/60"
-              : "bg-accent text-accent-foreground"
+          className={`relative h-7 w-12 shrink-0 rounded-full transition-colors disabled:opacity-50 ${
+            state === "on" ? "bg-accent" : "bg-foreground/20"
           }`}
         >
-          {state === "on" ? "끄기" : "켜기"}
+          <span
+            className={`absolute top-0.5 left-0.5 h-6 w-6 rounded-full bg-white shadow transition-transform ${
+              state === "on" ? "translate-x-5" : "translate-x-0"
+            }`}
+          />
         </button>
       )}
     </div>
