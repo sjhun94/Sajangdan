@@ -1,4 +1,5 @@
 import { pool } from "@/lib/db";
+import { SIDO_LIST, type Sido } from "@/lib/sido";
 
 const BIZINFO_API = "https://www.bizinfo.go.kr/uss/rss/bizinfoApi.do";
 const BIZINFO_ORIGIN = "https://www.bizinfo.go.kr";
@@ -131,18 +132,68 @@ export const SUPPORT_GROUP_LABELS: Record<SupportProgramGroup, string> = {
   others: "중소기업·사회적기업·기타",
 };
 
+// 지역(시·도) 구분. 기업마당 공고는 제목 앞에 [충남] 같은 지역 표시가 붙거나,
+// 소관기관이 "충청남도" 같은 시·도로 되어 있으면 지역 공고다. 둘 다 아니면 전국 공고.
+
+// 대괄호는 [[] / []] 로 적는다 (DB 설정에 따라 역슬래시가 사라질 수 있어서)
+// [서울ㆍ인천ㆍ경기] 처럼 한 괄호에 여러 지역이 있어도 알아본다
+const SIDO_TAG_REGEX = `^[[][^]]*(${SIDO_LIST.map((s) => s.key).join("|")})[^]]*[]]`;
+const SIDO_AGENCY_REGEX = `^(${SIDO_LIST.map((s) => s.agency).join("|")})`;
+const REGIONAL_CONDITION = `(title ~ '${SIDO_TAG_REGEX}' or coalesce(agency, '') ~ '${SIDO_AGENCY_REGEX}')`;
+
+function sidoCondition(sido: Sido): string {
+  const { key, agency } = SIDO_LIST.find((s) => s.key === sido)!;
+  return `(not ${REGIONAL_CONDITION} or title ~ '^[[][^]]*${key}[^]]*[]]' or coalesce(agency, '') ~ '^(${agency})')`;
+}
+
+// 업종별로 공고 제목·내용·대상에서 찾을 단어
+const INDUSTRY_KEYWORDS: Record<string, string> = {
+  food: "음식|외식|식당|요식|식품",
+  "delivery-only": "배달|음식|외식|요식",
+  cafe: "카페|제과|제빵|디저트|외식|요식",
+  pub: "주점|외식|요식|음식",
+  unmanned: "무인",
+  convenience: "편의점|동네슈퍼|유통",
+  beauty: "미용|뷰티|네일|이용업",
+  education: "학원|교육서비스",
+  pet: "반려|애견|펫",
+  lodging: "숙박|펜션|민박|관광",
+  leisure: "레저|관광|오락|체육",
+  fitness: "체육|헬스|스포츠|피트니스",
+  startup: "창업|스타트업|1인",
+  manufacturing: "제조|스마트공장|공장",
+  distribution: "유통|물류|도소매",
+  "online-store": "온라인|라이브커머스|쇼핑몰|이커머스|판로|스마트스토어",
+};
+
+function industryCondition(industrySlug: string): string | null {
+  const keywords = INDUSTRY_KEYWORDS[industrySlug];
+  if (!keywords) return null;
+  return `(title ~ '${keywords}' or coalesce(summary, '') ~ '${keywords}' or coalesce(target, '') ~ '${keywords}')`;
+}
+
 export async function listOpenSupportPrograms({
   group,
+  sido,
+  industrySlug,
   page = 1,
   pageSize = 20,
 }: {
   group?: SupportProgramGroup;
+  sido?: Sido; // 정하면 전국 공고 + 그 시·도 공고만
+  industrySlug?: string; // 정하면 그 업종 관련 공고만
   page?: number;
   pageSize?: number;
 } = {}): Promise<{ results: SupportProgram[]; total: number }> {
   let where = `(apply_end is null or apply_end >= (now() at time zone 'Asia/Seoul')::date)`;
   if (group === "small-biz") where += ` and ${SMALL_BIZ_CONDITION}`;
   if (group === "others") where += ` and not ${SMALL_BIZ_CONDITION}`;
+  if (sido) where += ` and ${sidoCondition(sido)}`;
+  if (industrySlug) {
+    const cond = industryCondition(industrySlug);
+    if (!cond) return { results: [], total: 0 };
+    where += ` and ${cond}`;
+  }
   const { rows: countRows } = await pool.query<{ count: string }>(
     `select count(*) from support_programs where ${where}`
   );
