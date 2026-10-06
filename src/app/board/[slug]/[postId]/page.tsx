@@ -8,6 +8,7 @@ import { getIndustryName } from "@/lib/industries";
 import { getTopicName } from "@/lib/topics";
 import { listComments } from "@/lib/comments";
 import { getPollForPost } from "@/lib/polls";
+import { listPostImageIds } from "@/lib/postImages";
 import { LikeButton } from "@/components/board/like-button";
 import { BookmarkButton } from "@/components/board/bookmark-button";
 import { ShareButton } from "@/components/board/share-button";
@@ -59,6 +60,7 @@ export default async function PostDetailPage({
 
   const comments = await listComments(postId, currentUserId, excludeUserIds);
   const poll = await getPollForPost(postId, currentUserId);
+  const imageIds = await listPostImageIds(postId);
   const canReportPost = !!currentUserId && post.user_id !== currentUserId;
 
   return (
@@ -79,6 +81,26 @@ export default async function PostDetailPage({
         <p className="whitespace-pre-wrap text-sm leading-7">
           {post.content}
         </p>
+        {imageIds.length > 0 && (
+          <div className="flex flex-col gap-2">
+            {imageIds.map((imageId) => (
+              <a
+                key={imageId}
+                href={`/api/post-images/${imageId}`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={`/api/post-images/${imageId}`}
+                  alt=""
+                  loading="lazy"
+                  className="max-h-[480px] w-auto max-w-full rounded-xl border border-foreground/10"
+                />
+              </a>
+            ))}
+          </div>
+        )}
         <div className="flex items-center gap-2 pt-2">
           <LikeButton
             targetType="post"

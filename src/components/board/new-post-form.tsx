@@ -1,10 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
 import { requestPushPrompt } from "@/lib/webPushClient";
 import { INDUSTRIES } from "@/lib/industries";
 import { TOPICS } from "@/lib/topics";
+import { ImagePicker } from "@/components/board/image-picker";
+
+const MAX_IMAGES = 5;
 
 const MAX_POLL_OPTIONS = 6;
 const MIN_POLL_OPTIONS = 2;
@@ -21,6 +24,15 @@ export function NewPostForm({ boardSlug }: { boardSlug: string }) {
   const [pollOptions, setPollOptions] = useState(["", ""]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const [imagesUploading, setImagesUploading] = useState(false);
+  const handleImagesChange = useCallback(
+    (urls: string[], uploading: boolean) => {
+      setImageUrls(urls);
+      setImagesUploading(uploading);
+    },
+    []
+  );
 
   function updatePollOption(index: number, value: string) {
     setPollOptions((prev) =>
@@ -46,6 +58,10 @@ export function NewPostForm({ boardSlug }: { boardSlug: string }) {
     e.preventDefault();
     setError(null);
 
+    if (imagesUploading) {
+      setError("사진을 올리는 중이에요. 잠시만 기다려주세요.");
+      return;
+    }
     if (isIndustryBoard && !industrySlug) {
       setError("업종을 선택해주세요.");
       return;
@@ -73,6 +89,7 @@ export function NewPostForm({ boardSlug }: { boardSlug: string }) {
           industrySlug: isIndustryBoard ? industrySlug : undefined,
           topicSlug: isTopicBoard ? topicSlug : undefined,
           pollOptions: isPollBoard ? trimmedOptions : undefined,
+          imageUrls: imageUrls.length > 0 ? imageUrls : undefined,
         }),
       });
       const data = await res.json().catch(() => null);
@@ -143,6 +160,7 @@ export function NewPostForm({ boardSlug }: { boardSlug: string }) {
         rows={isPollBoard ? 5 : 10}
         className="rounded-xl border border-foreground/15 bg-transparent px-4 py-3 text-sm outline-none focus:border-accent"
       />
+      <ImagePicker max={MAX_IMAGES} onChange={handleImagesChange} />
       {isPollBoard && (
         <div className="flex flex-col gap-2 rounded-xl border border-foreground/15 p-3">
           <span className="text-xs font-medium text-foreground/60">
@@ -182,10 +200,14 @@ export function NewPostForm({ boardSlug }: { boardSlug: string }) {
       {error && <p className="text-sm text-red-500">{error}</p>}
       <button
         type="submit"
-        disabled={loading}
+        disabled={loading || imagesUploading}
         className="rounded-full bg-accent px-6 py-3 text-sm font-semibold text-accent-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
       >
-        {loading ? "등록 중..." : "등록하기"}
+        {loading
+          ? "등록 중..."
+          : imagesUploading
+            ? "사진 올리는 중..."
+            : "등록하기"}
       </button>
     </form>
   );

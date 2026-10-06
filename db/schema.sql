@@ -281,3 +281,15 @@ on conflict (slug) do nothing;
 
 -- 기존에 '자유게시판'으로 만들어진 boards row가 있으면 이름만 새로 갱신
 update boards set name = '익명게시판' where slug = 'free' and name = '자유게시판';
+
+-- 게시글 사진 (글 하나에 최대 5장). 사진 파일은 Vercel Blob(비공개)에 있고
+-- 화면에는 /api/post-images/{id} 를 거쳐서만 보여준다 (원본 저장소 주소는 노출하지 않음)
+create table if not exists post_images (
+  id uuid primary key default gen_random_uuid(),
+  post_id uuid not null references posts(id) on delete cascade,
+  blob_url text not null,
+  content_type text not null,
+  sort_order int not null default 0,
+  created_at timestamptz not null default now()
+);
+create index if not exists post_images_post_id_idx on post_images (post_id, sort_order);

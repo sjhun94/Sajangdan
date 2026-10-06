@@ -4,6 +4,11 @@ import { requireUser } from "@/lib/authz";
 import { getBoardBySlug } from "@/lib/boards";
 import { createPost, listPosts } from "@/lib/posts";
 import { createPollOptions } from "@/lib/polls";
+import {
+  MAX_POST_IMAGES,
+  savePostImages,
+  verifyPostImageUrls,
+} from "@/lib/postImages";
 import { isRateLimited } from "@/lib/rateLimit";
 import {
   findSpamReason,
@@ -56,6 +61,7 @@ const createPostSchema = z.object({
   industrySlug: z.enum(industrySlugs).optional(),
   topicSlug: z.enum(topicSlugs).optional(),
   pollOptions: z.array(z.string().trim().min(1).max(100)).min(2).max(6).optional(),
+  imageUrls: z.array(z.string().url()).max(MAX_POST_IMAGES).optional(),
 });
 
 export async function POST(request: Request) {
@@ -136,6 +142,16 @@ export async function POST(request: Request) {
     );
   }
 
+  const images = parsed.data.imageUrls?.length
+    ? await verifyPostImageUrls(parsed.data.imageUrls)
+    : [];
+  if (!images) {
+    return NextResponse.json(
+      { error: "사진을 확인할 수 없어요. 다시 올려주세요." },
+      { status: 400 }
+    );
+  }
+
   const id = await createPost({
     boardId: board.id,
     userId: session!.user.id,
@@ -147,6 +163,9 @@ export async function POST(request: Request) {
 
   if (board.slug === "poll" && pollOptions) {
     await createPollOptions(id, pollOptions);
+  }
+  if (images.length > 0) {
+    await savePostImages(id, images);
   }
 
   return NextResponse.json({ id });
