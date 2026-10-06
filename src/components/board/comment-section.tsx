@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { requestPushPrompt } from "@/lib/webPushClient";
 import { LikeButton } from "@/components/board/like-button";
 import { ReportBlockMenu } from "@/components/board/report-block-menu";
 
@@ -55,6 +56,7 @@ function CommentForm({
       setContent("");
       setLoading(false);
       onDone?.();
+      requestPushPrompt("comment");
       router.refresh();
     } catch {
       setError("문제가 생겼어요. 잠시 후 다시 시도해주세요.");

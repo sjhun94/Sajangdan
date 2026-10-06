@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { requestPushPrompt } from "@/lib/webPushClient";
 import { INDUSTRIES } from "@/lib/industries";
 import { TOPICS } from "@/lib/topics";
 
@@ -82,6 +83,7 @@ export function NewPostForm({ boardSlug }: { boardSlug: string }) {
         return;
       }
 
+      requestPushPrompt("post");
       router.push(`/board/${boardSlug}/${data.id}`);
       router.refresh();
     } catch {

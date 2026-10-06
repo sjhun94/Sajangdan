@@ -1,17 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Capacitor } from "@capacitor/core";
+import {
+  hasPushSubscription,
+  isWebPushSupported,
+  subscribePush,
+} from "@/lib/webPushClient";
 
 type State = "loading" | "unsupported" | "denied" | "off" | "on";
-
-function urlBase64ToUint8Array(base64: string): Uint8Array<ArrayBuffer> {
-  const padding = "=".repeat((4 - (base64.length % 4)) % 4);
-  const raw = atob((base64 + padding).replace(/-/g, "+").replace(/_/g, "/"));
-  const bytes = new Uint8Array(new ArrayBuffer(raw.length));
-  for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
-  return bytes;
-}
 
 export function PushToggle() {
   const [state, setState] = useState<State>("loading");
@@ -19,12 +15,7 @@ export function PushToggle() {
 
   useEffect(() => {
     // 안드로이드 앱(WebView)과 푸시 미지원 브라우저에서는 숨김
-    if (
-      Capacitor.isNativePlatform() ||
-      !("serviceWorker" in navigator) ||
-      !("PushManager" in window) ||
-      !process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
-    ) {
+    if (!isWebPushSupported()) {
       setState("unsupported");
       return;
     }
@@ -32,35 +23,15 @@ export function PushToggle() {
       setState("denied");
       return;
     }
-    navigator.serviceWorker
-      .register("/sw.js")
-      .then((reg) => reg.pushManager.getSubscription())
-      .then((sub) => setState(sub ? "on" : "off"))
+    hasPushSubscription()
+      .then((on) => setState(on ? "on" : "off"))
       .catch(() => setState("unsupported"));
   }, []);
 
   async function turnOn() {
     setBusy(true);
     try {
-      const permission = await Notification.requestPermission();
-      if (permission !== "granted") {
-        setState(permission === "denied" ? "denied" : "off");
-        return;
-      }
-      const reg = await navigator.serviceWorker.register("/sw.js");
-      await navigator.serviceWorker.ready;
-      const sub = await reg.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(
-          process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!
-        ),
-      });
-      const res = await fetch("/api/push/subscribe", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(sub.toJSON()),
-      });
-      setState(res.ok ? "on" : "off");
+      setState(await subscribePush());
     } catch {
       setState("off");
     } finally {
