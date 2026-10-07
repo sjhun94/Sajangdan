@@ -7,6 +7,13 @@ import { getTopicName } from "@/lib/topics";
 import { formatShortDate } from "@/lib/format";
 import { Pagination, getTotalPages } from "@/components/board/pagination";
 
+export const metadata = {
+  title: "인기글 - 자영업자 사장님들이 많이 본 이야기 | 사장단",
+  description:
+    "오늘, 이번 주 자영업자 사장님들 사이에서 가장 많이 읽히고 공감받은 인기글을 모아봤어요.",
+  alternates: { canonical: "/hot" },
+};
+
 const PERIOD_LABELS: Record<HotPostPeriod, string> = {
   today: "오늘",
   week: "이번주",

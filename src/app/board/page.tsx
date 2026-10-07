@@ -7,6 +7,13 @@ import { getIndustryName } from "@/lib/industries";
 import { getTopicName } from "@/lib/topics";
 import { formatShortDate } from "@/lib/format";
 
+export const metadata = {
+  title: "자영업자 커뮤니티 게시판 - 사장님들의 익명 이야기 | 사장단",
+  description:
+    "익명게시판, 업종별·동네별·주제별 게시판, 지원사업 정보까지. 자영업자 사장님들이 솔직하게 이야기 나누는 커뮤니티 사장단의 게시판 모음이에요.",
+  alternates: { canonical: "/board" },
+};
+
 const HOT_PREVIEW_COUNT = 5;
 
 export default async function BoardListPage() {

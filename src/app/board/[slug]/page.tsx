@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { auth } from "@/auth";
@@ -12,18 +13,65 @@ import { IndustryTabs } from "@/components/board/industry-tabs";
 import { TopicTabs } from "@/components/board/topic-tabs";
 import { SupportProgramList } from "@/components/board/support-program-list";
 import { listOpenSupportPrograms } from "@/lib/supportPrograms";
+import { BOARD_SEO, INDUSTRY_SEO, TOPIC_SEO } from "@/lib/seoCopy";
+
+type BoardSearchParams = {
+  q?: string;
+  page?: string;
+  industry?: string;
+  topic?: string;
+};
+
+// 게시판·업종·주제마다 검색 결과에 보일 제목과 설명을 따로 붙인다
+export async function generateMetadata({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<BoardSearchParams>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  const { q, page, industry, topic } = await searchParams;
+  const board = await getBoardBySlug(slug);
+  if (!board) return {};
+
+  const industryName = slug === "industry" ? getIndustryName(industry ?? null) : null;
+  const topicName = slug === "topic" ? getTopicName(topic ?? null) : null;
+  const pageNum = Math.max(1, Number(page) || 1);
+
+  let title = BOARD_SEO[slug]?.title ?? board.name;
+  let description = BOARD_SEO[slug]?.description ?? board.description;
+  let canonical = `/board/${slug}`;
+  if (industryName && industry) {
+    title = `${INDUSTRY_SEO[industry]?.keyword ?? `${industryName} 사장님 커뮤니티`} - ${industryName} 게시판`;
+    description = `${INDUSTRY_SEO[industry]?.intro.split(" ").slice(1).join(" ") ?? ""} 사장님들끼리 익명으로 솔직하게 이야기하는 자영업자 커뮤니티 사장단.`;
+    canonical = `/board/industry?industry=${industry}`;
+  } else if (topicName && topic) {
+    title = `${TOPIC_SEO[topic]?.keyword ?? topicName} - ${topicName} 게시판`;
+    description = `${TOPIC_SEO[topic]?.intro.split(" ").slice(1).join(" ") ?? ""} 사장님들끼리 익명으로 나누는 자영업자 커뮤니티 사장단.`;
+    canonical = `/board/topic?topic=${topic}`;
+  }
+  if (pageNum > 1) {
+    title += ` (${pageNum}페이지)`;
+    canonical += `${canonical.includes("?") ? "&" : "?"}page=${pageNum}`;
+  }
+
+  return {
+    title: `${title} | 사장단`,
+    description,
+    alternates: { canonical },
+    openGraph: { title: `${title} | 사장단`, description },
+    // 게시판 안 검색 결과 페이지는 검색엔진에 올리지 않는다
+    robots: q ? { index: false, follow: true } : undefined,
+  };
+}
 
 export default async function BoardPage({
   params,
   searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{
-    q?: string;
-    page?: string;
-    industry?: string;
-    topic?: string;
-  }>;
+  searchParams: Promise<BoardSearchParams>;
 }) {
   const { slug } = await params;
   const { q, page: pageParam, industry, topic } = await searchParams;
@@ -75,6 +123,14 @@ export default async function BoardPage({
         <IndustryTabs slug={slug} active={industrySlug} q={q} />
       )}
       {isTopicBoard && <TopicTabs slug={slug} active={topicSlug} q={q} />}
+      {industrySlug && INDUSTRY_SEO[industrySlug] && (
+        <p className="text-sm text-foreground/60">
+          {INDUSTRY_SEO[industrySlug].intro}
+        </p>
+      )}
+      {topicSlug && TOPIC_SEO[topicSlug] && (
+        <p className="text-sm text-foreground/60">{TOPIC_SEO[topicSlug].intro}</p>
+      )}
 
       {supportPrograms.length > 0 && (
         <div className="flex flex-col gap-1 rounded-2xl border border-foreground/10 p-5">

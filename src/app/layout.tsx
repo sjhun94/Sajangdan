@@ -22,6 +22,10 @@ export const metadata: Metadata = {
   title: "사장단 | 자영업자 익명 커뮤니티",
   description: SITE_DESCRIPTION,
   applicationName: "사장단",
+  // 새 글 목록(RSS) 위치를 알려준다
+  alternates: {
+    types: { "application/rss+xml": [{ url: "/rss.xml", title: "사장단 새 글" }] },
+  },
   // 아이폰 "홈 화면에 추가" 시 앱처럼 열리도록
   appleWebApp: {
     capable: true,
