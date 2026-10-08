@@ -243,3 +243,79 @@ export function formatDeadline(applyEnd: string | null): string {
   const days = Math.round((end.getTime() - today.getTime()) / 86400000);
   return days === 0 ? "D-day" : `D-${days}`;
 }
+
+export type SupportProgramDetail = SupportProgram & {
+  isOpen: boolean; // 아직 신청할 수 있는지
+  isSmallBiz: boolean; // 소상공인·자영업자 대상인지
+};
+
+const UUID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// 공고 상세 페이지용. 원문 내용은 바꾸지 않고 그대로 보여준다 (공공누리 제3유형: 출처표시·변경금지)
+export async function getSupportProgramById(
+  id: string
+): Promise<SupportProgramDetail | null> {
+  if (!UUID_REGEX.test(id)) return null;
+  const { rows } = await pool.query<{
+    id: string;
+    title: string;
+    agency: string | null;
+    category: string | null;
+    summary: string | null;
+    target: string | null;
+    apply_period: string | null;
+    apply_end: string | null;
+    url: string;
+    is_open: boolean;
+    is_small_biz: boolean;
+  }>(
+    `select id, title, agency, category, summary, target, apply_period,
+            to_char(apply_end, 'YYYY-MM-DD') as apply_end, url,
+            (apply_end is null or apply_end >= (now() at time zone 'Asia/Seoul')::date) as is_open,
+            ${SMALL_BIZ_CONDITION} as is_small_biz
+     from support_programs where id = $1`,
+    [id]
+  );
+  const r = rows[0];
+  if (!r) return null;
+  return {
+    id: r.id,
+    title: r.title,
+    agency: r.agency,
+    category: r.category,
+    summary: r.summary,
+    target: r.target,
+    applyPeriod: r.apply_period,
+    applyEnd: r.apply_end,
+    url: r.url,
+    isOpen: r.is_open,
+    isSmallBiz: r.is_small_biz,
+  };
+}
+
+// 같은 묶음·같은 분야의 다른 신청 가능 공고
+export async function listSimilarPrograms(
+  program: SupportProgramDetail,
+  limit = 5
+): Promise<SupportProgram[]> {
+  const { results } = await listOpenSupportPrograms({
+    group: program.isSmallBiz ? "small-biz" : "others",
+    pageSize: limit + 10,
+  });
+  const others = results.filter((p) => p.id !== program.id);
+  const sameCategory = others.filter((p) => p.category === program.category);
+  return [...sameCategory, ...others.filter((p) => p.category !== program.category)].slice(0, limit);
+}
+
+// 사이트맵용: 아직 신청 가능한 공고 id
+export async function listOpenSupportProgramIds(): Promise<
+  { id: string; createdAt: Date }[]
+> {
+  const { rows } = await pool.query<{ id: string; created_at: Date }>(
+    `select id, created_at from support_programs
+     where apply_end is null or apply_end >= (now() at time zone 'Asia/Seoul')::date
+     order by created_at desc`
+  );
+  return rows.map((r) => ({ id: r.id, createdAt: r.created_at }));
+}

@@ -4,6 +4,7 @@ import { listBoards } from "@/lib/boards";
 import { SITE_URL } from "@/lib/siteUrl";
 import { INDUSTRIES } from "@/lib/industries";
 import { TOPICS } from "@/lib/topics";
+import { listOpenSupportProgramIds } from "@/lib/supportPrograms";
 
 // 검색엔진에 알려줄 페이지 목록. 글이 계속 늘어나므로 1시간마다 새로 만든다.
 export const revalidate = 3600;
@@ -11,8 +12,9 @@ export const revalidate = 3600;
 const MAX_POSTS = 5000;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const [boards, { rows: posts }] = await Promise.all([
+  const [boards, programs, { rows: posts }] = await Promise.all([
     listBoards(),
+    listOpenSupportProgramIds(),
     pool.query<{ id: string; slug: string; created_at: Date }>(
       `select p.id, b.slug, p.created_at
        from posts p join boards b on b.id = p.board_id
@@ -44,6 +46,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       url: `${SITE_URL}/board/topic?topic=${t.slug}`,
       changeFrequency: "daily" as const,
       priority: 0.7,
+    })),
+    // 아직 신청할 수 있는 지원사업 공고 (마감되면 자동으로 빠진다)
+    ...programs.map((p) => ({
+      url: `${SITE_URL}/support/${p.id}`,
+      lastModified: p.createdAt,
+      changeFrequency: "weekly" as const,
+      priority: 0.6,
     })),
     ...posts.map((p) => ({
       url: `${SITE_URL}/board/${p.slug}/${p.id}`,

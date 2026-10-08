@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { formatDeadline, type SupportProgram } from "@/lib/supportPrograms";
 
 export function SupportProgramList({
@@ -8,11 +9,9 @@ export function SupportProgramList({
   return (
     <div className="flex flex-col divide-y divide-foreground/10">
       {programs.map((p) => (
-        <a
+        <Link
           key={p.id}
-          href={p.url}
-          target="_blank"
-          rel="noopener noreferrer"
+          href={`/support/${p.id}`}
           className="flex flex-col gap-1 py-4 hover:opacity-80"
         >
           <span className="flex flex-wrap items-center gap-1">
@@ -41,7 +40,7 @@ export function SupportProgramList({
               .filter(Boolean)
               .join(" · ")}
           </span>
-        </a>
+        </Link>
       ))}
     </div>
   );
